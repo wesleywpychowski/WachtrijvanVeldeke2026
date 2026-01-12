@@ -6,49 +6,51 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Specifieke styling voor het Weergave scherm */
+        /* LAYOUT: SPLIT SCREEN */
         body { 
             background-color: var(--light); 
             color: var(--dark); 
             display: flex; 
             flex-direction: column; 
             height: 100vh; 
-            overflow: hidden; /* Geen scrollbalken */
+            overflow: hidden;
         }
 
-        /* Header balk met Logo */
+        /* HEADER */
         .header {
             background: white;
             padding: 15px 30px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            z-index: 10;
+            height: 80px; /* Vaste hoogte */
         }
 
-        /* Het Grote Scherm in het midden */
-        .main-container {
-            flex: 1;
+        /* MAIN CONTAINER (DE SPLITSING) */
+        .split-container {
             display: flex;
+            flex: 1; /* Vult de rest van het scherm */
+            height: calc(100vh - 80px); /* Trek header eraf */
+        }
+
+        /* LINKER KANT: GROTE OPROEP */
+        .left-panel {
+            flex: 1; /* Neemt 50% ruimte */
+            background: white;
+            display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
-            flex-direction: column;
-        }
-
-        #grootScherm {
-            text-align: center;
-            padding: 50px;
-            background: white;
-            border-radius: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            border: 1px solid #eee;
-            min-width: 50%;
+            border-right: 1px solid #eee;
+            position: relative;
         }
 
         .groot-nummer {
-            font-size: 12rem; /* Heel groot */
+            font-size: 15rem; /* Nog groter */
             font-weight: 800;
-            color: var(--primary); /* Magenta */
+            color: #d14977; /* JOUW SPECIFIEKE KLEUR */
             line-height: 1;
             margin-bottom: 20px;
         }
@@ -58,43 +60,77 @@
             color: var(--dark);
             font-weight: 300;
         }
+        
+        .label-nieuw {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #ccc;
+            font-weight: bold;
+        }
 
-        /* De Footer met lijst */
-        .footer-lijst {
+        /* RECHTER KANT: LIJST */
+        .right-panel {
+            flex: 1; /* Neemt 50% ruimte */
+            background: #f8f9fc;
+            padding: 30px;
+            overflow-y: auto; /* Scrollbaar als het er veel zijn */
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .right-header {
+            color: var(--secondary);
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e3e6f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* KAARTJES IN RECHTER LIJST */
+        .list-card {
             background: white;
             padding: 20px;
-            border-top: 5px solid var(--secondary); /* Cyaan randje */
-            height: 180px;
-        }
-
-        .lijst-container {
+            border-radius: 12px;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.05);
             display: flex;
-            gap: 20px;
-            justify-content: center;
-            overflow-x: auto;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 6px solid #ccc; /* Standaard grijs */
+            animation: slideInRight 0.5s ease;
+        }
+        
+        .list-card.accent {
+            border-left-color: var(--secondary); /* Cyaan accent */
         }
 
-        /* De kleine kaartjes onderaan */
-        .mini-card {
-            background: var(--light);
-            border-left: 5px solid var(--secondary); /* Cyaan accent */
-            padding: 15px 25px;
-            border-radius: 10px;
-            min-width: 150px;
-            text-align: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            animation: slideIn 0.5s ease;
+        .list-nummer {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        .list-kamer {
+            font-size: 1.2rem;
+            color: #888;
+            text-align: right;
         }
 
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+        /* ANIMATIES */
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
         }
 
-        /* Overlay styling */
+        /* OVERLAY */
         #startOverlay {
-            background: rgba(255,255,255,0.95); 
-            color: var(--dark);
+            background: rgba(255,255,255,0.98); 
         }
     </style>
 </head>
@@ -103,25 +139,30 @@
     <div id="startOverlay" style="position: fixed; top:0; left:0; width:100%; height:100%; z-index:99; display:flex; justify-content:center; align-items:center; flex-direction:column;">
         <img src="Logovv.jpg" style="width: 150px; margin-bottom: 20px;">
         <h1 style="color: var(--primary);">Klik om scherm te starten</h1>
-        <button onclick="startScherm()" class="btn-primary" style="font-size:24px; padding:20px 40px; box-shadow: 0 5px 15px rgba(196, 0, 75, 0.3);">START SCHERM</button>
+        <button onclick="startScherm()" class="btn-primary" style="font-size:24px; padding:20px 40px;">START SCHERM</button>
     </div>
 
     <div class="header">
         <img src="Logovv.jpg" alt="Logo" style="height: 60px;">
-        <h2 style="margin:0; color: var(--secondary);">Huidige Oproep</h2>
+        <div style="font-size: 24px; font-weight: bold; color: var(--dark);">Volgnummers</div>
     </div>
     
-    <div class="main-container">
-        <div id="grootScherm">
+    <div class="split-container">
+        
+        <div class="left-panel" id="linksPaneel">
+            <div class="label-nieuw">Nu aan de beurt</div>
             <div class="groot-nummer" id="grootNummer">--</div>
             <div class="groot-kamer" id="grootKamer">Wachten...</div>
         </div>
-    </div>
 
-    <div class="footer-lijst">
-        <h4 style="margin-top:0; margin-bottom: 15px; color: #888; text-transform: uppercase; letter-spacing: 1px; font-size: 14px; text-align: center;">Ook in behandeling</h4>
-        <div class="lijst-container" id="andereLijst">
+        <div class="right-panel">
+            <div class="right-header">
+                <i class="fas fa-clipboard-list"></i> Ook in behandeling
             </div>
+            <div id="rechterLijst">
+                </div>
+        </div>
+
     </div>
 
     <script type="module">
@@ -137,7 +178,7 @@
         };
 
         function startLuisteren() {
-            // Sorteren op startTijd (zodat de laatste oproep altijd bovenaan staat)
+            // Sorteren op startTijd (zodat de laatste oproep altijd bovenaan staat en links komt)
             const q = query(
                 collection(db, "tickets"), 
                 where("status", "==", "bezig"), 
@@ -145,8 +186,8 @@
             );
 
             onSnapshot(q, (snapshot) => {
-                const andereLijst = document.getElementById("andereLijst");
-                andereLijst.innerHTML = "";
+                const rechterLijst = document.getElementById("rechterLijst");
+                rechterLijst.innerHTML = "";
 
                 // Geluidje trigger
                 snapshot.docChanges().forEach((change) => {
@@ -156,34 +197,43 @@
                 });
 
                 if (!snapshot.empty) {
+                    // --- 1. DE NIEUWSTE (Index 0) -> LINKERKANT ---
                     const nieuwste = snapshot.docs[0].data();
                     
                     document.getElementById("grootNummer").innerText = `${nieuwste.nummer}`;
                     
-                    // Pulse Animatie triggeren
-                    const grootSchermDiv = document.getElementById("grootScherm");
-                    grootSchermDiv.style.animation = 'none';
-                    grootSchermDiv.offsetHeight; /* trigger reflow */
-                    grootSchermDiv.style.animation = 'pulse 0.5s'; 
+                    // Pulse Animatie op het linkerpaneel
+                    const linksPaneel = document.getElementById("linksPaneel");
+                    linksPaneel.style.animation = 'none';
+                    linksPaneel.offsetHeight; /* trigger reflow */
+                    linksPaneel.style.animation = 'pulse 0.5s'; 
                     
-                    document.getElementById("grootKamer").innerHTML = `<i class="fas fa-arrow-right" style="color:var(--secondary)"></i> ${nieuwste.kamer}`;
+                    document.getElementById("grootKamer").innerHTML = `<i class="fas fa-arrow-right" style="color:#d14977"></i> ${nieuwste.kamer}`;
 
-                    // De rest in mooie lichte kaartjes
-                    snapshot.docs.forEach((doc, index) => {
-                        if(index > 0) { 
-                            const data = doc.data();
-                            const div = document.createElement("div");
-                            div.className = "mini-card";
-                            div.innerHTML = `
-                                <span style="font-size:30px; font-weight:bold; color:var(--dark);">${data.nummer}</span><br>
-                                <span style="color:#666; font-size:14px;">${data.kamer}</span>
-                            `;
-                            andereLijst.appendChild(div);
-                        }
-                    });
+                    // --- 2. DE REST (Index > 0) -> RECHTERKANT ---
+                    if (snapshot.docs.length > 1) {
+                        snapshot.docs.forEach((doc, index) => {
+                            if(index > 0) { // Sla de eerste over, die staat al links
+                                const data = doc.data();
+                                const div = document.createElement("div");
+                                div.className = "list-card accent";
+                                div.innerHTML = `
+                                    <div class="list-nummer">Nr. ${data.nummer}</div>
+                                    <div class="list-kamer">
+                                        <i class="fas fa-door-open" style="font-size:16px;"></i> ${data.kamer}
+                                    </div>
+                                `;
+                                rechterLijst.appendChild(div);
+                            }
+                        });
+                    } else {
+                        rechterLijst.innerHTML = "<div style='color:#999; text-align:center; margin-top:50px;'>Geen andere nummers in behandeling.</div>";
+                    }
+
                 } else {
                     document.getElementById("grootNummer").innerText = "--";
                     document.getElementById("grootKamer").innerText = "Geen oproepen";
+                    rechterLijst.innerHTML = "";
                 }
                 eersteKeerLaden = false;
             });
