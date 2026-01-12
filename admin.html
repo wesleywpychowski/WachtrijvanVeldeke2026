@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <title>Admin Dashboard</title>
+    <title>Admin Dashboard Pro</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -26,7 +26,7 @@
             </div>
 
             <div class="column">
-                <h2><i class="fas fa-door-open"></i> Lokalen</h2>
+                <h2><i class="fas fa-door-open"></i> Lokalen Beheer</h2>
                 <div id="kamersLijst" class="kamer-grid">
                     </div>
             </div>
@@ -35,60 +35,90 @@
 
     <script type="module">
         import { db } from './firebase-config.js';
-        import { collection, onSnapshot, query, where, orderBy, limit, updateDoc, doc, setDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { collection, onSnapshot, query, where, orderBy, limit, updateDoc, doc, setDoc, getDocs, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // CONFIGURATIE
-        const kamers = [
-            { id: 1, naam: "Lokaal 101" },
-            { id: 2, naam: "Secretariaat" },
-            { id: 3, naam: "Directie" },
-            { id: 4, naam: "Zorgcoördinator" } 
-        ];
+        // --- VARIABELEN ---
+        let wachtrijData = []; // Hier slaan we tijdelijk de wachtenden in op voor de pop-up
+        let kamerNamen = {};   // Hier slaan we de namen op (bijv: { "1": "Directeur", "2": "Secretariaat" })
 
-        // RENDER DE KAMERS (Nu met mooie HTML)
+        // --- 1. INITIALISATIE: KAMERNAMEN LADEN ---
+        async function laadKamerNamen() {
+            try {
+                const docRef = doc(db, "settings", "kamernamen");
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    kamerNamen = docSnap.data();
+                }
+                renderKamers(); // Nu pas de kamers tekenen
+            } catch (e) {
+                console.error("Kon namen niet laden", e);
+                renderKamers(); // Toch tekenen met standaarden
+            }
+        }
+        laadKamerNamen();
+
+        // --- 2. RENDER DE 10 KAMERS ---
         function renderKamers() {
             const container = document.getElementById("kamersLijst");
             container.innerHTML = "";
-            kamers.forEach(k => {
+            
+            // Loop van 1 tot 10
+            for (let i = 1; i <= 10; i++) {
+                // Gebruik opgeslagen naam OF standaard "Kamer X"
+                const huidigeNaam = kamerNamen[i] || `Kamer ${i}`;
+
                 const div = document.createElement("div");
                 div.className = "kamer-box";
-                div.id = `kamerBox-${k.id}`; 
+                div.id = `kamerBox-${i}`; 
                 div.innerHTML = `
-                    <h3>${k.naam}</h3>
-                    <div id="statusBadge-${k.id}" class="status-badge badge-vrij">BESCHIKBAAR</div>
+                    <div style="display:flex; justify-content:center; align-items:center; gap:10px;">
+                        <h3 style="margin:0;" id="titel-${i}">${huidigeNaam}</h3>
+                        <i class="fas fa-pencil-alt" style="cursor:pointer; color:#ccc; font-size:14px;" onclick="pasNaamAan(${i})"></i>
+                    </div>
                     
-                    <h1 id="huidigTicket-${k.id}" style="font-size: 40px; margin: 10px 0; color: #ccc;">--</h1>
+                    <div id="statusBadge-${i}" class="status-badge badge-vrij">BESCHIKBAAR</div>
+                    
+                    <h1 id="huidigTicket-${i}" style="font-size: 40px; margin: 10px 0; color: #ccc;">--</h1>
                     
                     <div style="display: flex; gap: 5px; justify-content: center; flex-wrap: wrap;">
-                        <button id="roepBtn-${k.id}" class="btn-primary" onclick="roepVolgende(${k.id}, '${k.naam}')">
-                            <i class="fas fa-bullhorn"></i> Oproepen
-                        </button>
                         
-                        <button id="klaarBtn-${k.id}" class="btn-success" onclick="toonAfhandelen(${k.id})" style="display:none;">
+                        <div id="roepGroep-${i}" style="display:flex; gap:5px;">
+                            <button class="btn-primary" onclick="roepVolgende(${i})">
+                                <i class="fas fa-bullhorn"></i> Volgende
+                            </button>
+                            <button class="btn-primary" onclick="kiesUitLijst(${i})" style="background:#4e73df; opacity:0.8;" title="Kies specifiek persoon">
+                                <i class="fas fa-list"></i>
+                            </button>
+                        </div>
+                        
+                        <button id="klaarBtn-${i}" class="btn-success" onclick="toonAfhandelen(${i})" style="display:none;">
                             <i class="fas fa-check"></i> Klaar
                         </button>
                         
-                        <button id="terugBtn-${k.id}" class="btn-warning btn-icon" onclick="terugNaarWachtrij(${k.id})" style="display:none;">
+                        <button id="terugBtn-${i}" class="btn-warning btn-icon" onclick="terugNaarWachtrij(${i})" style="display:none;">
                             <i class="fas fa-undo"></i>
                         </button>
                     </div>
                 `;
                 container.appendChild(div);
-            });
+            }
         }
-        renderKamers();
 
-        // LUISTERAAR WACHTRIJ
+        // --- 3. LUISTERAAR WACHTRIJ ---
         const qWacht = query(collection(db, "tickets"), where("status", "==", "wachtend"), orderBy("timestamp"));
         onSnapshot(qWacht, (snapshot) => {
+            wachtrijData = []; // Reset interne lijst
             const lijst = document.getElementById("wachtrijLijst");
-            document.getElementById("aantalWachtend").innerText = snapshot.size; // Teller update
+            document.getElementById("aantalWachtend").innerText = snapshot.size;
             lijst.innerHTML = "";
             
             if(snapshot.empty) { lijst.innerHTML = "<p style='color:#999; text-align:center;'>Geen wachtenden.</p>"; }
 
             snapshot.forEach((docSnap) => {
                 const data = docSnap.data();
+                // Voeg toe aan interne lijst voor de popup
+                wachtrijData.push({ id: docSnap.id, ...data });
+
                 const div = document.createElement("div");
                 div.className = "card status-wachtend";
                 div.innerHTML = `
@@ -105,19 +135,21 @@
             });
         });
 
-        // LUISTERAAR KAMERS
+        // --- 4. LUISTERAAR KAMERS (BEZIG) ---
         const qBezig = query(collection(db, "tickets"), where("status", "==", "bezig"));
         onSnapshot(qBezig, (snapshot) => {
-            kamers.forEach(k => resetKamerUI(k.id));
+            // Eerst alles op 'vrij' zetten (visueel)
+            for(let i=1; i<=10; i++) resetKamerUI(i);
+
+            // Dan vullen wie bezig is
             snapshot.forEach(docSnap => {
                 const ticket = docSnap.data();
                 const kId = ticket.kamerId;
-                if(kId) {
+                if(kId && document.getElementById(`kamerBox-${kId}`)) {
                     const box = document.getElementById(`kamerBox-${kId}`);
                     const badge = document.getElementById(`statusBadge-${kId}`);
                     const tekst = document.getElementById(`huidigTicket-${kId}`);
                     
-                    // Visuele update
                     tekst.innerText = `${ticket.nummer}`;
                     tekst.style.color = "var(--dark)";
                     tekst.setAttribute('data-ticket-id', docSnap.id);
@@ -126,7 +158,7 @@
                     badge.className = "status-badge badge-bezet";
                     badge.innerText = "BEZIG";
 
-                    document.getElementById(`roepBtn-${kId}`).style.display = 'none';
+                    document.getElementById(`roepGroep-${kId}`).style.display = 'none';
                     document.getElementById(`klaarBtn-${kId}`).style.display = 'inline-flex';
                     document.getElementById(`terugBtn-${kId}`).style.display = 'inline-flex';
                 }
@@ -134,111 +166,154 @@
         });
 
         function resetKamerUI(id) {
-            document.getElementById(`huidigTicket-${id}`).innerText = "--";
-            document.getElementById(`huidigTicket-${id}`).style.color = "#ccc";
+            const el = document.getElementById(`huidigTicket-${id}`);
+            if(!el) return;
+            el.innerText = "--";
+            el.style.color = "#ccc";
             document.getElementById(`kamerBox-${id}`).classList.remove('bezet');
             document.getElementById(`statusBadge-${id}`).className = "status-badge badge-vrij";
             document.getElementById(`statusBadge-${id}`).innerText = "BESCHIKBAAR";
             
-            document.getElementById(`roepBtn-${id}`).style.display = 'inline-flex';
+            document.getElementById(`roepGroep-${id}`).style.display = 'flex';
             document.getElementById(`klaarBtn-${id}`).style.display = 'none';
             document.getElementById(`terugBtn-${id}`).style.display = 'none';
         }
 
-        // --- FUNCTIES MET SWEETALERT ---
+        // --- 5. INTERACTIE FUNCTIES ---
 
-        window.verwijderTicket = async (id) => {
-            // Mooie popup ipv confirm()
-            const result = await Swal.fire({
-                title: 'Zeker weten?',
-                text: "Je verwijdert dit ticket uit de wachtrij.",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#e74a3b',
-                confirmButtonText: 'Ja, verwijder!'
+        window.pasNaamAan = async (kamerId) => {
+            const huidigeNaam = kamerNamen[kamerId] || `Kamer ${kamerId}`;
+            const { value: nieuweNaam } = await Swal.fire({
+                title: 'Pas kamernaam aan',
+                input: 'text',
+                inputValue: huidigeNaam,
+                showCancelButton: true
             });
-            if(result.isConfirmed) await deleteDoc(doc(db, "tickets", id));
+
+            if (nieuweNaam) {
+                // Update lokale variabele
+                kamerNamen[kamerId] = nieuweNaam;
+                // Update scherm
+                document.getElementById(`titel-${kamerId}`).innerText = nieuweNaam;
+                // Opslaan in database
+                await setDoc(doc(db, "settings", "kamernamen"), kamerNamen);
+            }
         };
 
-        window.roepVolgende = async (kamerId, kamerNaam) => {
+        window.roepVolgende = async (kamerId) => {
+            const kamerNaam = kamerNamen[kamerId] || `Kamer ${kamerId}`;
+            
             const qOudste = query(collection(db, "tickets"), where("status", "==", "wachtend"), orderBy("timestamp"), limit(1));
             const snapshot = await getDocs(qOudste);
+            
             if (!snapshot.empty) {
                 const ticket = snapshot.docs[0];
-                await updateDoc(doc(db, "tickets", ticket.id), {
-                    status: 'bezig',
-                    kamer: kamerNaam,
-                    kamerId: kamerId,
-                    startTijd: new Date()
-                });
+                toewijzenAanKamer(ticket.id, kamerId, kamerNaam);
             } else {
                 Swal.fire('Leeg!', 'Er staat niemand in de wachtrij.', 'info');
             }
         };
 
+        window.kiesUitLijst = async (kamerId) => {
+            const kamerNaam = kamerNamen[kamerId] || `Kamer ${kamerId}`;
+
+            if(wachtrijData.length === 0) {
+                Swal.fire('Leeg!', 'Geen wachtenden om uit te kiezen.', 'info');
+                return;
+            }
+
+            // Maak een HTML lijstje voor in de SweetAlert
+            let htmlLijst = '<div style="text-align:left; max-height:300px; overflow-y:auto;">';
+            wachtrijData.forEach(t => {
+                htmlLijst += `
+                    <div onclick="kiesSpecifiek('${t.id}', ${kamerId})" 
+                         style="padding:10px; border-bottom:1px solid #eee; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+                         <span><strong>Nr. ${t.nummer}</strong> (${t.opmerking || ''})</span>
+                         <button class="btn-primary btn-icon">Kies</button>
+                    </div>`;
+            });
+            htmlLijst += '</div>';
+
+            // Toon de popup
+            Swal.fire({
+                title: `Wie roept ${kamerNaam} op?`,
+                html: htmlLijst,
+                showConfirmButton: false,
+                showCloseButton: true
+            });
+        };
+
+        // Hulpfunctie die wordt aangeroepen vanuit de HTML string in SweetAlert
+        window.kiesSpecifiek = (ticketId, kamerId) => {
+            Swal.close(); // Sluit popup
+            const kamerNaam = kamerNamen[kamerId] || `Kamer ${kamerId}`;
+            toewijzenAanKamer(ticketId, kamerId, kamerNaam);
+        };
+
+        async function toewijzenAanKamer(ticketId, kamerId, kamerNaam) {
+            await updateDoc(doc(db, "tickets", ticketId), {
+                status: 'bezig',
+                kamer: kamerNaam, // Hier sturen we de (nieuwe) naam mee!
+                kamerId: kamerId,
+                startTijd: new Date()
+            });
+        }
+
+        window.verwijderTicket = async (id) => {
+            const result = await Swal.fire({
+                title: 'Verwijderen?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'Ja'
+            });
+            if(result.isConfirmed) await deleteDoc(doc(db, "tickets", id));
+        };
+
         window.toonAfhandelen = async (kamerId) => {
             const ticketId = document.getElementById(`huidigTicket-${kamerId}`).getAttribute('data-ticket-id');
-            if(!ticketId) return;
-
-            // Interactieve popup voor notitie
             const { value: notitie } = await Swal.fire({
-                title: 'Gesprek afronden',
+                title: 'Afronden',
                 input: 'text',
-                inputLabel: 'Persoonlijke notitie voor archief (optioneel)',
-                inputPlaceholder: 'Typ hier...',
+                placeholder: 'Notitie...',
                 showCancelButton: true,
-                confirmButtonText: 'Afronden & Archiveren',
-                confirmButtonColor: '#1cc88a'
+                confirmButtonText: 'Archiveren'
             });
 
-            if (notitie !== undefined) { // Als er niet op cancel is geklikt
+            if (notitie !== undefined) {
                 await updateDoc(doc(db, "tickets", ticketId), {
                     status: 'afgehandeld',
                     adminNotitie: notitie || ''
                 });
-                Swal.fire('Afgehandeld!', 'Het ticket staat in het archief.', 'success');
             }
         };
 
         window.terugNaarWachtrij = async (kamerId) => {
-            const ticketId = document.getElementById(`huidigTicket-${kamerId}`).getAttribute('data-ticket-id');
-            
-            const result = await Swal.fire({
-                title: 'Terugzetten?',
-                text: "Het nummer gaat terug de wachtrij in.",
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Ja, zet terug'
-            });
-
-            if(result.isConfirmed) {
+             const ticketId = document.getElementById(`huidigTicket-${kamerId}`).getAttribute('data-ticket-id');
+             if(confirm("Terugzetten in wachtrij?")) {
                  await updateDoc(doc(db, "tickets", ticketId), {
                     status: 'wachtend', kamer: null, kamerId: null
                 });
-            }
+             }
         };
 
         window.resetSysteem = async () => {
             const { value: text } = await Swal.fire({
                 title: 'SYSTEEM RESET',
-                text: "Typ 'RESET' om alle data te wissen. Dit kan niet ongedaan worden gemaakt!",
+                text: "Typ 'RESET' om alles te wissen.",
                 input: 'text',
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#d33',
-                confirmButtonText: 'Alles Wissen'
+                confirmButtonColor: '#d33'
             });
 
             if (text === "RESET") {
-                Swal.fire({ title: 'Bezig met wissen...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-                
+                Swal.showLoading();
                 const qAlle = query(collection(db, "tickets"));
                 const snapshot = await getDocs(qAlle);
-                const deletePromises = snapshot.docs.map(d => deleteDoc(doc(db, "tickets", d.id)));
-                await Promise.all(deletePromises);
+                await Promise.all(snapshot.docs.map(d => deleteDoc(doc(db, "tickets", d.id))));
                 await setDoc(doc(db, "settings", "teller"), { laatsteNummer: 0 });
-
-                Swal.fire('Gereset!', 'Systeem is schoon.', 'success').then(() => location.reload());
+                location.reload();
             }
         };
     </script>
