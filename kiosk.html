@@ -30,12 +30,7 @@
         </div>
     </div>
 
-    <script type="module">
-        // ... PLAK HIER DE JAVASCRIPT UIT JE VORIGE KIOSK.HTML ...
-        // Zorg dat je wel verwijst naar '../firebase-config.js' of './firebase-config.js' afhankelijk van je map.
-        // Als je dezelfde map gebruikt als eerst, kopieer dan gewoon alles tussen <script> en </script> van je vorige bestand.
-        
-        // VOOR HET GEMAK, HIER IS DE KORTE VERSIE VAN HET SCRIPT OPNIEUW:
+   <script type="module">
         import { db } from './firebase-config.js';
         import { collection, addDoc, doc, getDoc, updateDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
@@ -43,30 +38,40 @@
 
         btn.addEventListener('click', async () => {
             const opmerking = document.getElementById('opmerking').value;
-            btn.disabled = true; 
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Bezig...'; // Mooi laad icoontje
+            btn.disabled = true; // Voorkom dubbel klikken
+            btn.innerText = "Even geduld...";
 
             try {
+                // 1. Haal de teller op (of maak aan als hij niet bestaat)
                 const settingsRef = doc(db, "settings", "teller");
                 let settingsSnap = await getDoc(settingsRef);
-                let huidigNummer = settingsSnap.exists() ? settingsSnap.data().laatsteNummer : 0;
-                const nieuwNummer = huidigNummer + 1;
                 
+                let huidigNummer = 0;
+                if (settingsSnap.exists()) {
+                    huidigNummer = settingsSnap.data().laatsteNummer;
+                }
+
+                // 2. Hoog nummer op met 1
+                const nieuwNummer = huidigNummer + 1;
                 await setDoc(settingsRef, { laatsteNummer: nieuwNummer });
+
+                // 3. Maak het ticket aan in de database
                 await addDoc(collection(db, "tickets"), {
                     nummer: nieuwNummer,
                     opmerking: opmerking,
-                    status: 'wachtend', 
+                    status: 'wachtend', // wachtend, bezig, afgehandeld
                     timestamp: serverTimestamp(),
                     kamer: null
                 });
 
+                // 4. Toon resultaat op scherm
                 document.getElementById('ticketNummer').innerText = nieuwNummer;
                 document.getElementById('resultaat').style.display = 'block';
                 btn.style.display = 'none';
+
             } catch (e) {
-                console.error(e);
-                alert("Er ging iets mis.");
+                console.error("Fout:", e);
+                alert("Er ging iets mis. Roep hulp.");
                 btn.disabled = false;
             }
         });
