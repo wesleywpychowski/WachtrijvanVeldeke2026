@@ -172,3 +172,17 @@ body.dark-mode { background: #1a1a2e; color: white; }
 .modern-table tr:hover {
     background-color: #fafafa; /* Licht effect bij muis erover */
 }
+/* --- SWEETALERT POPUP FIX --- */
+/* Zorg dat de titel en tekst netjes staan */
+div:where(.swal2-container) .swal2-input-label {
+    margin-top: 10px !important;
+    font-size: 16px !important;
+    color: #555 !important;
+}
+
+/* Fix voor het tekstveld dat uit de kader loopt */
+.swal-input-fix {
+    width: 90% !important; /* Iets kleiner dan 100% zodat hij binnen de padding past */
+    margin: 10px auto !important; /* Centreert het veld */
+    box-sizing: border-box !important;
+}
