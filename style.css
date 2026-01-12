@@ -3,7 +3,7 @@
 
 :root {
     /* GO! Huisstijl Kleuren */
-    --primary: #C4004B;   /* GO! Magenta (voor hoofdacties) */
+    --primary: #d74171;   /* GO! Magenta (voor hoofdacties) */
     --secondary: #009FE3; /* GO! Cyaan (voor info/secundair) */
     --success: #87C038;   /* GO! Groen (voor afronden/vrij) */
     --danger: #E30613;    /* Rood (voor verwijderen/bezet) */
