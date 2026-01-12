@@ -186,3 +186,17 @@ div:where(.swal2-container) .swal2-input-label {
     margin: 10px auto !important; /* Centreert het veld */
     box-sizing: border-box !important;
 }
+
+/* --- ANIMATIES --- */
+@keyframes pulse {
+    0% { 
+        transform: scale(1); 
+    }
+    50% { 
+        transform: scale(1.15); /* Wordt 15% groter */
+        text-shadow: 0 0 30px rgba(255, 255, 255, 0.8); /* Witte gloed */
+    }
+    100% { 
+        transform: scale(1); 
+    }
+}
