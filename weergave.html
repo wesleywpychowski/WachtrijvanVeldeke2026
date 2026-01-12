@@ -4,33 +4,32 @@
     <meta charset="UTF-8">
     <title>Wachtrij Scherm</title>
     <link rel="stylesheet" href="style.css">
-    <style>
-        body { background-color: #222; color: white; }
-        .main-display { font-size: 120px; font-weight: bold; margin-top: 50px; color: #4cd137; }
-        .sub-text { font-size: 40px; color: #ddd; }
-        .lijst-bezig { margin-top: 50px; display: flex; justify-content: center; gap: 20px; }
-        .mini-card { background: #444; padding: 20px; border-radius: 10px; font-size: 24px; border: 2px solid #666; }
-        
-        /* Overlay om geluid te activeren */
-        #startOverlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:99; display:flex; justify-content:center; align-items:center; flex-direction:column;}
-    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body>
+<body class="dark-mode" style="text-align: center; display: flex; flex-direction: column; height: 100vh;">
 
-    <div id="startOverlay">
-        <h1>Klik hier om het scherm te starten</h1>
-        <button onclick="startScherm()" style="font-size:30px; padding:20px;">START SCHERM</button>
+    <div id="startOverlay" style="position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:99; display:flex; justify-content:center; align-items:center; flex-direction:column; color:white;">
+        <i class="fas fa-volume-up fa-5x" style="margin-bottom: 20px;"></i>
+        <h1>Klik om scherm te starten</h1>
+        <button onclick="startScherm()" class="btn-success" style="font-size:24px; padding:20px 40px;">START</button>
     </div>
 
-    <h1>Huidige Oproep</h1>
+    <div style="padding: 20px;">
+        <h2 style="color: #888; text-transform: uppercase; letter-spacing: 2px;">Nu aan de beurt</h2>
+    </div>
     
-    <div id="grootScherm">
-        <div class="main-display" id="grootNummer">--</div>
-        <div class="sub-text" id="grootKamer">Wachten op oproep...</div>
+    <div style="flex: 1; display: flex; justify-content: center; align-items: center;">
+        <div id="grootScherm">
+            <div class="groot-nummer" id="grootNummer">--</div>
+            <div class="groot-kamer" id="grootKamer"><i class="fas fa-arrow-right"></i> Wachten...</div>
+        </div>
     </div>
 
-    <div class="lijst-bezig" id="andereLijst">
-        </div>
+    <div style="background: #16213e; padding: 30px; border-top: 1px solid #333;">
+        <h3 style="color: #888; margin-bottom: 20px;">Ook in behandeling:</h3>
+        <div class="lijst-bezig" id="andereLijst" style="display: flex; justify-content: center; gap: 30px; flex-wrap: wrap;">
+            </div>
+    </div>
 
     <script type="module">
         import { db } from './firebase-config.js';
@@ -41,39 +40,38 @@
 
         window.startScherm = () => {
             document.getElementById('startOverlay').style.display = 'none';
-            // Start de luisteraar pas na de klik
             startLuisteren();
         };
 
         function startLuisteren() {
-            // Luister naar tickets die 'bezig' zijn
             const q = query(collection(db, "tickets"), where("status", "==", "bezig"), orderBy("timestamp", "desc"));
 
             onSnapshot(q, (snapshot) => {
                 const andereLijst = document.getElementById("andereLijst");
                 andereLijst.innerHTML = "";
 
-                // Check of er iets veranderd is voor het geluidje
+                // Geluidje trigger
                 snapshot.docChanges().forEach((change) => {
                     if (change.type === "added" && !eersteKeerLaden) {
-                        // NIEUWE OPROEP!
-                        audio.play().catch(e => console.log("Audio fout (heeft gebruiker geklikt?):", e));
+                        audio.play().catch(e => console.log(e));
                     }
                 });
 
                 if (!snapshot.empty) {
-                    // Pak de allernieuwste voor het grote scherm
                     const nieuwste = snapshot.docs[0].data();
-                    document.getElementById("grootNummer").innerText = `Nr. ${nieuwste.nummer}`;
-                    document.getElementById("grootKamer").innerText = `Ga naar: ${nieuwste.kamer}`;
+                    document.getElementById("grootNummer").innerText = `${nieuwste.nummer}`;
+                    document.getElementById("grootKamer").innerHTML = `${nieuwste.kamer}`; // pijl is nu css
 
-                    // De rest in kleine blokjes eronder
                     snapshot.docs.forEach((doc, index) => {
-                        if(index > 0) { // Sla de eerste over (die staat al groot)
+                        if(index > 0) { 
                             const data = doc.data();
                             const div = document.createElement("div");
-                            div.className = "mini-card";
-                            div.innerHTML = `Nr. ${data.nummer}<br><small>${data.kamer}</small>`;
+                            // Styling voor kleine kaartjes
+                            div.style.background = "#0f3460";
+                            div.style.padding = "15px 30px";
+                            div.style.borderRadius = "10px";
+                            div.style.border = "1px solid #1a1a2e";
+                            div.innerHTML = `<span style="font-size:30px; font-weight:bold; color:var(--primary);">${data.nummer}</span><br><span style="color:#ccc;">${data.kamer}</span>`;
                             andereLijst.appendChild(div);
                         }
                     });
@@ -81,7 +79,6 @@
                     document.getElementById("grootNummer").innerText = "--";
                     document.getElementById("grootKamer").innerText = "Geen oproepen";
                 }
-
                 eersteKeerLaden = false;
             });
         }
