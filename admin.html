@@ -7,13 +7,14 @@
     <style>
         .grid { display: flex; gap: 20px; }
         .column { flex: 1; background: #fff; padding: 15px; border-radius: 8px; }
-        .kamer-box { border: 2px solid #007bff; padding: 10px; margin-bottom: 10px; border-radius: 5px; }
+        .kamer-box { border: 2px solid #007bff; padding: 10px; margin-bottom: 10px; border-radius: 5px; background: #f9f9f9; }
+        .bezig-box { background-color: #e6fffa; border-color: #00b894; }
     </style>
 </head>
 <body>
     <h1>Admin Dashboard</h1>
     <div style="text-align: right; margin-bottom: 20px;">
-        <button onclick="resetSysteem()" style="background: red; font-size: 12px;">⚠ RESET SYSTEEM</button>
+        <button onclick="resetSysteem()" style="background: red; font-size: 12px;">⚠ RESET SYSTEEM (Alles wissen)</button>
     </div>
 
     <div class="grid">
@@ -31,19 +32,43 @@
 
     <script type="module">
         import { db } from './firebase-config.js';
-        import { collection, onSnapshot, query, where, orderBy, updateDoc, doc, setDoc, getDocs, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { collection, onSnapshot, query, where, orderBy, limit, updateDoc, doc, setDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // CONFIGURATIE KAMERS
+        // --- 1. INSTELLINGEN ---
         const kamers = [
             { id: 1, naam: "Lokaal 101" },
             { id: 2, naam: "Secretariaat" },
             { id: 3, naam: "Directie" }
         ];
 
-        // 1. Laad de wachtrij (REAL-TIME!)
-        const q = query(collection(db, "tickets"), where("status", "==", "wachtend"), orderBy("timestamp"));
+        // --- 2. INITIALISATIE UI ---
+        // We bouwen de kamers één keer op bij het laden
+        function renderKamers() {
+            const container = document.getElementById("kamersLijst");
+            container.innerHTML = "";
+            kamers.forEach(k => {
+                const div = document.createElement("div");
+                div.className = "kamer-box";
+                div.id = `kamerBox-${k.id}`; // Uniek ID voor styling
+                div.innerHTML = `
+                    <h3>${k.naam}</h3>
+                    
+                    <div id="huidigTicket-${k.id}" style="font-weight:bold; color: blue; margin-bottom:10px;">Vrij</div>
+                    
+                    <button id="roepBtn-${k.id}" onclick="roepVolgende(${k.id}, '${k.naam}')">Roep Volgende</button>
+                    <button id="klaarBtn-${k.id}" onclick="toonAfhandelen(${k.id})" style="background:green; display:none;">Afronden</button>
+                    <button id="terugBtn-${k.id}" onclick="terugNaarWachtrij(${k.id})" style="background:orange; display:none; font-size:12px;">Terug naar wachtrij</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+        renderKamers();
+
+
+        // --- 3. LUISTERAAR: WACHTRIJ (REAL-TIME) ---
+        const qWacht = query(collection(db, "tickets"), where("status", "==", "wachtend"), orderBy("timestamp"));
         
-        onSnapshot(q, (snapshot) => {
+        onSnapshot(qWacht, (snapshot) => {
             const lijst = document.getElementById("wachtrijLijst");
             lijst.innerHTML = "";
             
@@ -64,82 +89,107 @@
             });
         });
 
-        // 2. Render de Kamers
-        function renderKamers() {
-            const container = document.getElementById("kamersLijst");
-            container.innerHTML = "";
-            kamers.forEach(k => {
-                const div = document.createElement("div");
-                div.className = "kamer-box";
-                div.innerHTML = `
-                    <h3>${k.naam}</h3>
-                    <button onclick="roepVolgende(${k.id}, '${k.naam}')">Roep Volgende</button>
-                    <button onclick="toonAfhandelen(${k.id})" style="background:green; display:none;" id="klaarBtn-${k.id}">Afronden</button>
-                    <div id="huidigTicket-${k.id}" style="font-weight:bold; color: blue;">Vrij</div>
-                `;
-                container.appendChild(div);
-            });
-        }
-        renderKamers();
 
-        // 3. Functies beschikbaar maken voor HTML (window object)
+        // --- 4. LUISTERAAR: ACTIEVE KAMERS (REAL-TIME FIX!) ---
+        // Dit lost het probleem op dat kamers leeg zijn na F5 verversen
+        const qBezig = query(collection(db, "tickets"), where("status", "==", "bezig"));
+
+        onSnapshot(qBezig, (snapshot) => {
+            // Stap 1: Reset eerst visueel alle kamers naar "Vrij"
+            kamers.forEach(k => resetKamerUI(k.id));
+
+            // Stap 2: Vul de kamers die in de database "bezig" zijn
+            snapshot.forEach(docSnap => {
+                const ticket = docSnap.data();
+                const kId = ticket.kamerId; // Dit nummer hebben we opgeslagen bij het ticket
+                
+                // Update de UI voor deze kamer
+                if(kId) {
+                    const box = document.getElementById(`kamerBox-${kId}`);
+                    const tekst = document.getElementById(`huidigTicket-${kId}`);
+                    const roepBtn = document.getElementById(`roepBtn-${kId}`);
+                    const klaarBtn = document.getElementById(`klaarBtn-${kId}`);
+                    const terugBtn = document.getElementById(`terugBtn-${kId}`);
+
+                    if(tekst) {
+                        tekst.innerText = `Bezig met Nr. ${ticket.nummer}`;
+                        tekst.setAttribute('data-ticket-id', docSnap.id); // Sla ID op in HTML om later te gebruiken
+                        
+                        // Styling en knoppen wisselen
+                        box.classList.add('bezig-box');
+                        roepBtn.style.display = 'none';
+                        klaarBtn.style.display = 'inline-block';
+                        terugBtn.style.display = 'inline-block';
+                    }
+                }
+            });
+        });
+
+        // Hulpfunctie om UI te resetten
+        function resetKamerUI(id) {
+            document.getElementById(`huidigTicket-${id}`).innerText = "Vrij";
+            document.getElementById(`huidigTicket-${id}`).removeAttribute('data-ticket-id');
+            document.getElementById(`kamerBox-${id}`).classList.remove('bezig-box');
+            document.getElementById(`roepBtn-${id}`).style.display = 'inline-block';
+            document.getElementById(`klaarBtn-${id}`).style.display = 'none';
+            document.getElementById(`terugBtn-${id}`).style.display = 'none';
+        }
+
+
+        // --- 5. ACTIES (WINDOW FUNCTIES) ---
+
         window.verwijderTicket = async (id) => {
             if(confirm("Verwijderen?")) await deleteDoc(doc(db, "tickets", id));
         };
 
         window.roepVolgende = async (kamerId, kamerNaam) => {
             // Zoek oudste ticket
-            const qWacht = query(collection(db, "tickets"), where("status", "==", "wachtend"), orderBy("timestamp"), limit(1));
-            const snapshot = await getDocs(qWacht); // Hier gebruiken we getDocs ipv onSnapshot omdat we 1x willen halen
+            const qOudste = query(collection(db, "tickets"), where("status", "==", "wachtend"), orderBy("timestamp"), limit(1));
+            const snapshot = await getDocs(qOudste);
 
             if (!snapshot.empty) {
                 const ticket = snapshot.docs[0];
                 await updateDoc(doc(db, "tickets", ticket.id), {
                     status: 'bezig',
                     kamer: kamerNaam,
-                    kamerId: kamerId
+                    kamerId: kamerId, // Belangrijk: sla het ID op zodat we weten welke kamer het is bij refresh
+                    startTijd: new Date()
                 });
-                
-                // Update UI (simpel gehouden, idealiter ook real-time luisteren naar 'bezig' status)
-                document.getElementById(`huidigTicket-${kamerId}`).innerText = `Bezig met Nr. ${ticket.data().nummer}`;
-                document.getElementById(`klaarBtn-${kamerId}`).style.display = 'inline-block';
             } else {
                 alert("Niemand in de wachtrij!");
             }
         };
-        
-        // Nodig om limit te gebruiken
-        import { limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         window.toonAfhandelen = async (kamerId) => {
-            // Normaal zoek je hier het actieve ticket bij de kamer, voor nu simpele reset
-            let notitie = prompt("Wil je een persoonlijk bericht toevoegen voor het archief?", "");
+            // Haal het ticket ID op uit de HTML (die we daar in de onSnapshot hebben gestopt)
+            const ticketId = document.getElementById(`huidigTicket-${kamerId}`).getAttribute('data-ticket-id');
             
-            // We moeten het ticket vinden dat nu 'bezig' is bij deze kamer
-            const qBezig = query(collection(db, "tickets"), where("status", "==", "bezig"), where("kamerId", "==", kamerId));
-            const snap = await getDocs(qBezig);
-            
-            snap.forEach(async (t) => {
-                await updateDoc(doc(db, "tickets", t.id), {
-                    status: 'afgehandeld',
-                    adminNotitie: notitie || ''
-                });
-            });
+            if(!ticketId) {
+                alert("Geen ticket gevonden, probeer pagina te verversen.");
+                return;
+            }
 
-            document.getElementById(`huidigTicket-${kamerId}`).innerText = "Vrij";
-            document.getElementById(`klaarBtn-${kamerId}`).style.display = 'none';
+            let notitie = prompt("Wil je een persoonlijk bericht toevoegen voor het archief?", "");
+            if (notitie === null) return; // Annuleren
+
+            await updateDoc(doc(db, "tickets", ticketId), {
+                status: 'afgehandeld',
+                adminNotitie: notitie || ''
+            });
+            // De onSnapshot luisteraar ziet de status verandering en maakt de kamer vanzelf weer leeg!
+        };
+
+        window.terugNaarWachtrij = async (kamerId) => {
+             const ticketId = document.getElementById(`huidigTicket-${kamerId}`).getAttribute('data-ticket-id');
+             if(!ticketId) return;
+
+             if(confirm("Weet je zeker dat je dit nummer terug in de wachtrij wilt zetten?")) {
+                 await updateDoc(doc(db, "tickets", ticketId), {
+                    status: 'wachtend',
+                    kamer: null,
+                    kamerId: null
+                });
+             }
         };
 
         window.resetSysteem = async () => {
-            if(prompt("Typ 'RESET' om alles te wissen") === "RESET") {
-                // Hier zou je een batch delete doen. Voor nu: reset alleen de teller.
-                // In productie moet je hier alle tickets verwijderen.
-                const settingsRef = doc(db, "settings", "teller");
-                await setDoc(settingsRef, { laatsteNummer: 0 });
-                alert("Teller gereset naar 0. (Tickets moet je nog handmatig verwijderen in Firebase console voor een volledige clean-up in deze demo versie)");
-                location.reload();
-            }
-        };
-    </script>
-</body>
-</html>
