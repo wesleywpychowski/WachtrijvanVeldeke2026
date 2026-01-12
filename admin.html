@@ -193,3 +193,32 @@
         };
 
         window.resetSysteem = async () => {
+            if(prompt("Typ 'RESET' om de hele database leeg te maken en de teller op 0 te zetten.") === "RESET") {
+                const button = document.querySelector("button[onclick='resetSysteem()']");
+                button.innerText = "Bezig met wissen...";
+                button.disabled = true;
+
+                try {
+                    // 1. Haal ALLE tickets op
+                    const qAlle = query(collection(db, "tickets"));
+                    const snapshot = await getDocs(qAlle);
+
+                    // 2. Verwijder ze allemaal (Promise.all voor snelheid)
+                    const deletePromises = snapshot.docs.map(docSnap => deleteDoc(doc(db, "tickets", docSnap.id)));
+                    await Promise.all(deletePromises);
+
+                    // 3. Reset de teller
+                    await setDoc(doc(db, "settings", "teller"), { laatsteNummer: 0 });
+
+                    alert("Systeem is volledig gereset!");
+                    location.reload();
+                } catch (e) {
+                    console.error(e);
+                    alert("Fout bij resetten: " + e.message);
+                    button.disabled = false;
+                }
+            }
+        };
+    </script>
+</body>
+</html>
