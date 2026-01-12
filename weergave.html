@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <title>Wachtrij Scherm</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { background-color: #222; color: white; }
+        .main-display { font-size: 120px; font-weight: bold; margin-top: 50px; color: #4cd137; }
+        .sub-text { font-size: 40px; color: #ddd; }
+        .lijst-bezig { margin-top: 50px; display: flex; justify-content: center; gap: 20px; }
+        .mini-card { background: #444; padding: 20px; border-radius: 10px; font-size: 24px; border: 2px solid #666; }
+        
+        /* Overlay om geluid te activeren */
+        #startOverlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:99; display:flex; justify-content:center; align-items:center; flex-direction:column;}
+    </style>
+</head>
+<body>
+
+    <div id="startOverlay">
+        <h1>Klik hier om het scherm te starten</h1>
+        <button onclick="startScherm()" style="font-size:30px; padding:20px;">START SCHERM</button>
+    </div>
+
+    <h1>Huidige Oproep</h1>
+    
+    <div id="grootScherm">
+        <div class="main-display" id="grootNummer">--</div>
+        <div class="sub-text" id="grootKamer">Wachten op oproep...</div>
+    </div>
+
+    <div class="lijst-bezig" id="andereLijst">
+        </div>
+
+    <script type="module">
+        import { db } from './firebase-config.js';
+        import { collection, onSnapshot, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const audio = new Audio('dingdong.mp3');
+        let eersteKeerLaden = true;
+
+        window.startScherm = () => {
+            document.getElementById('startOverlay').style.display = 'none';
+            // Start de luisteraar pas na de klik
+            startLuisteren();
+        };
+
+        function startLuisteren() {
+            // Luister naar tickets die 'bezig' zijn
+            const q = query(collection(db, "tickets"), where("status", "==", "bezig"), orderBy("timestamp", "desc"));
+
+            onSnapshot(q, (snapshot) => {
+                const andereLijst = document.getElementById("andereLijst");
+                andereLijst.innerHTML = "";
+
+                // Check of er iets veranderd is voor het geluidje
+                snapshot.docChanges().forEach((change) => {
+                    if (change.type === "added" && !eersteKeerLaden) {
+                        // NIEUWE OPROEP!
+                        audio.play().catch(e => console.log("Audio fout (heeft gebruiker geklikt?):", e));
+                    }
+                });
+
+                if (!snapshot.empty) {
+                    // Pak de allernieuwste voor het grote scherm
+                    const nieuwste = snapshot.docs[0].data();
+                    document.getElementById("grootNummer").innerText = `Nr. ${nieuwste.nummer}`;
+                    document.getElementById("grootKamer").innerText = `Ga naar: ${nieuwste.kamer}`;
+
+                    // De rest in kleine blokjes eronder
+                    snapshot.docs.forEach((doc, index) => {
+                        if(index > 0) { // Sla de eerste over (die staat al groot)
+                            const data = doc.data();
+                            const div = document.createElement("div");
+                            div.className = "mini-card";
+                            div.innerHTML = `Nr. ${data.nummer}<br><small>${data.kamer}</small>`;
+                            andereLijst.appendChild(div);
+                        }
+                    });
+                } else {
+                    document.getElementById("grootNummer").innerText = "--";
+                    document.getElementById("grootKamer").innerText = "Geen oproepen";
+                }
+
+                eersteKeerLaden = false;
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <title>Archief</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #007bff; color: white; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <div class="container" style="max-width: 1000px;">
+        <h1>Archief (Afgehandeld)</h1>
+        <a href="admin.html">Terug naar Admin</a>
+        
+        <table id="archiefTabel">
+            <thead>
+                <tr>
+                    <th>Nr</th>
+                    <th>Tijd</th>
+                    <th>Opmerking Bezoeker</th>
+                    <th>Kamer</th>
+                    <th>Admin Notitie</th>
+                </tr>
+            </thead>
+            <tbody>
+                </tbody>
+        </table>
+    </div>
+
+    <script type="module">
+        import { db } from './firebase-config.js';
+        import { collection, query, where, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        async function laadArchief() {
+            const tbody = document.querySelector("#archiefTabel tbody");
+            tbody.innerHTML = "<tr><td colspan='5'>Laden... (Als dit lang duurt, check de console voor een index-link!)</td></tr>";
+
+            try {
+                // LET OP: Deze query heeft waarschijnlijk OOK een index nodig!
+                // Kijk in de console als het niet werkt.
+                const q = query(collection(db, "tickets"), where("status", "==", "afgehandeld"), orderBy("timestamp", "desc"));
+                
+                const snapshot = await getDocs(q);
+                tbody.innerHTML = ""; // Leegmaken
+
+                if(snapshot.empty) {
+                    tbody.innerHTML = "<tr><td colspan='5'>Nog geen archief data.</td></tr>";
+                    return;
+                }
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    
+                    // Tijd netjes maken
+                    let tijdString = "...";
+                    if(data.timestamp) {
+                        const date = data.timestamp.toDate();
+                        tijdString = date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    }
+
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `
+                        <td><strong>${data.nummer}</strong></td>
+                        <td>${tijdString}</td>
+                        <td>${data.opmerking || '-'}</td>
+                        <td>${data.kamer || '-'}</td>
+                        <td style="color:blue;">${data.adminNotitie || '-'}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+            } catch (error) {
+                console.error("Fout:", error);
+                tbody.innerHTML = `<tr><td colspan='5' style='color:red;'>Fout: ${error.message}. <br>Check de console (F12) voor de Index Link!</td></tr>`;
+            }
+        }
+
+        laadArchief();
+    </script>
+</body>
+</html>
