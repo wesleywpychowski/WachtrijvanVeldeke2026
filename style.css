@@ -139,3 +139,36 @@ body.dark-mode { background: #1a1a2e; color: white; }
     color: var(--primary);
     background-color: #f0f2f5;
 }
+
+/* --- MODERNE TABEL STIJL --- */
+.table-responsive {
+    overflow-x: auto;
+}
+
+.modern-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.modern-table th {
+    text-align: left;
+    padding: 15px;
+    background-color: #f8f9fc;
+    color: var(--primary);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 1px;
+    border-bottom: 2px solid #e3e6f0;
+}
+
+.modern-table td {
+    padding: 15px;
+    border-bottom: 1px solid #e3e6f0;
+    color: var(--dark);
+}
+
+.modern-table tr:hover {
+    background-color: #fafafa; /* Licht effect bij muis erover */
+}
