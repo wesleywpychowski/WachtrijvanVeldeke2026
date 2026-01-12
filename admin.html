@@ -271,15 +271,31 @@
             if(result.isConfirmed) await deleteDoc(doc(db, "tickets", id));
         };
 
-        window.toonAfhandelen = async (kamerId) => {
+       window.toonAfhandelen = async (kamerId) => {
             const ticketId = document.getElementById(`huidigTicket-${kamerId}`).getAttribute('data-ticket-id');
+            
             const { value: notitie } = await Swal.fire({
                 title: 'Afronden',
                 input: 'text',
-                placeholder: 'Notitie...',
+                inputLabel: 'Opmerking toevoegen', // Hier staat je nieuwe tekst
+                inputPlaceholder: 'Typ hier een notitie (optioneel)...',
                 showCancelButton: true,
-                confirmButtonText: 'Archiveren'
+                confirmButtonText: 'Archiveren',
+                confirmButtonColor: '#1cc88a',
+                cancelButtonText: 'Annuleren',
+                // Deze optie zorgt dat de input niet te breed wordt:
+                customClass: {
+                    input: 'swal-input-fix'
+                }
             });
+
+            if (notitie !== undefined) {
+                await updateDoc(doc(db, "tickets", ticketId), {
+                    status: 'afgehandeld',
+                    adminNotitie: notitie || ''
+                });
+            }
+        };
 
             if (notitie !== undefined) {
                 await updateDoc(doc(db, "tickets", ticketId), {
