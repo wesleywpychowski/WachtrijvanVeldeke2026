@@ -2,35 +2,38 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Kiosk</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body style="display: flex; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
+<body style="display: flex; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(135deg, #4e73df 0%, #224abe 100%); margin: 0;">
 
-    <div class="card" style="width: 100%; max-width: 500px; text-align: center; padding: 40px;">
+    <div class="card kiosk-card" style="text-align: center; background: white;">
+        
         <i class="fas fa-school fa-3x" style="color: var(--primary); margin-bottom: 20px;"></i>
-        <h1>Inschrijvingen</h1>
-        <p style="color: #666; margin-bottom: 30px;">Welkom! Neem een volgnummer om u in te schrijven.</p>
+        
+        <h1 style="font-size: 24px;">Inschrijvingen</h1>
+        <p style="color: #666; margin-bottom: 30px;">Welkom! Neem een volgnummer.</p>
         
         <div style="position: relative; margin-bottom: 20px;">
             <i class="fas fa-comment-alt" style="position: absolute; left: 15px; top: 18px; color: #ccc;"></i>
-            <input type="text" id="opmerking" placeholder="Naam leerling of opmerking..." style="padding-left: 45px;">
+            <input type="text" id="opmerking" placeholder="Naam of opmerking..." style="padding-left: 45px; width: 100%; box-sizing: border-box;">
         </div>
 
-        <button id="neemNummerBtn" class="btn-primary" style="width: 100%; justify-content: center; font-size: 18px; padding: 15px;">
+        <button id="neemNummerBtn" class="btn-primary">
             <i class="fas fa-ticket-alt"></i> Neem Volgnummer
         </button>
 
         <div id="resultaat" style="display:none; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
             <h2 style="font-size: 18px;">Uw nummer is:</h2>
-            <div id="ticketNummer" style="font-size: 80px; font-weight: bold; color: var(--success);">--</div>
+            <div id="ticketNummer" style="font-size: 80px; font-weight: bold; color: var(--success); line-height: 1.2;">--</div>
             <p>Neem plaats in de wachtruimte.</p>
-            <button onclick="location.reload()" class="btn-warning"><i class="fas fa-undo"></i> Terug</button>
+            <button onclick="location.reload()" class="btn-warning"><i class="fas fa-undo"></i> Nieuw Nummer</button>
         </div>
     </div>
 
-   <script type="module">
+    <script type="module">
         import { db } from './firebase-config.js';
         import { collection, addDoc, doc, getDoc, updateDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
@@ -38,41 +41,32 @@
 
         btn.addEventListener('click', async () => {
             const opmerking = document.getElementById('opmerking').value;
-            btn.disabled = true; // Voorkom dubbel klikken
-            btn.innerText = "Even geduld...";
+            btn.disabled = true; 
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Bezig...';
 
             try {
-                // 1. Haal de teller op (of maak aan als hij niet bestaat)
                 const settingsRef = doc(db, "settings", "teller");
                 let settingsSnap = await getDoc(settingsRef);
-                
-                let huidigNummer = 0;
-                if (settingsSnap.exists()) {
-                    huidigNummer = settingsSnap.data().laatsteNummer;
-                }
-
-                // 2. Hoog nummer op met 1
+                let huidigNummer = settingsSnap.exists() ? settingsSnap.data().laatsteNummer : 0;
                 const nieuwNummer = huidigNummer + 1;
+                
                 await setDoc(settingsRef, { laatsteNummer: nieuwNummer });
-
-                // 3. Maak het ticket aan in de database
                 await addDoc(collection(db, "tickets"), {
                     nummer: nieuwNummer,
                     opmerking: opmerking,
-                    status: 'wachtend', // wachtend, bezig, afgehandeld
+                    status: 'wachtend', 
                     timestamp: serverTimestamp(),
                     kamer: null
                 });
 
-                // 4. Toon resultaat op scherm
                 document.getElementById('ticketNummer').innerText = nieuwNummer;
                 document.getElementById('resultaat').style.display = 'block';
-                btn.style.display = 'none';
-
+                btn.style.display = 'none'; // Verberg de knop na klikken
             } catch (e) {
-                console.error("Fout:", e);
-                alert("Er ging iets mis. Roep hulp.");
+                console.error(e);
+                alert("Er ging iets mis.");
                 btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-ticket-alt"></i> Probeer opnieuw';
             }
         });
     </script>
