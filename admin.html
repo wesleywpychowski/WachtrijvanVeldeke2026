@@ -130,6 +130,7 @@
 
             snapshot.forEach((docSnap) => {
                 const data = docSnap.data();
+                // Sla op in geheugen voor popups
                 wachtrijData.push({ id: docSnap.id, ...data });
 
                 const div = document.createElement("div");
@@ -137,12 +138,16 @@
                 div.innerHTML = `
                     <div style="display:flex; align-items:center; gap: 15px;">
                         <div style="font-size: 24px; font-weight: bold; color: var(--primary); background: #ebf3ff; width: 50px; height: 50px; display:flex; align-items:center; justify-content:center; border-radius:50%;">${data.nummer}</div>
-                        <div>
-                            <div style="font-weight:600;">${data.opmerking || 'Geen opmerking'}</div>
+                        <div style="flex:1;">
+                            <div style="font-weight:600;">${data.opmerking || '<em style="color:#ccc">Geen opmerking</em>'}</div>
                             <small style="color:#888;">Wachtend...</small>
                         </div>
                     </div>
-                    <button onclick="verwijderTicket('${docSnap.id}')" class="btn-danger btn-icon"><i class="fas fa-times"></i></button>
+                    
+                    <div style="display:flex; flex-direction:column; gap:5px;">
+                        <button onclick="verwijderTicket('${docSnap.id}')" class="btn-danger btn-icon" title="Verwijderen"><i class="fas fa-times"></i></button>
+                        <button onclick="pasOpmerkingAanTicket('${docSnap.id}')" class="btn-primary btn-icon" style="background-color: var(--secondary);" title="Opmerking bewerken"><i class="fas fa-pencil-alt"></i></button>
+                    </div>
                 `;
                 lijst.appendChild(div);
             });
@@ -192,13 +197,36 @@
 
         // --- 5. INTERACTIE FUNCTIES ---
 
+        // NIEUWE FUNCTIE: OPMERKING AANPASSEN
+        window.pasOpmerkingAanTicket = async (ticketId) => {
+            // Zoek de huidige tekst in onze lokale lijst
+            const ticketData = wachtrijData.find(t => t.id === ticketId);
+            const huidigeTekst = ticketData ? ticketData.opmerking : "";
+
+            const { value: nieuweTekst } = await Swal.fire({
+                title: 'Opmerking aanpassen',
+                input: 'text',
+                inputValue: huidigeTekst,
+                showCancelButton: true,
+                inputPlaceholder: 'Naam of opmerking...',
+                customClass: { input: 'swal-input-fix' } // Gebruikt jouw fix van daarnet
+            });
+
+            if (nieuweTekst !== undefined) {
+                await updateDoc(doc(db, "tickets", ticketId), {
+                    opmerking: nieuweTekst
+                });
+            }
+        }
+
         window.pasNaamAan = async (kamerId) => {
             const huidigeNaam = kamerNamen[kamerId] || `Kamer ${kamerId}`;
             const { value: nieuweNaam } = await Swal.fire({
                 title: 'Pas kamernaam aan',
                 input: 'text',
                 inputValue: huidigeNaam,
-                showCancelButton: true
+                showCancelButton: true,
+                customClass: { input: 'swal-input-fix' }
             });
 
             if (nieuweNaam) {
@@ -271,22 +299,18 @@
             if(result.isConfirmed) await deleteDoc(doc(db, "tickets", id));
         };
 
-window.toonAfhandelen = async (kamerId) => {
+        window.toonAfhandelen = async (kamerId) => {
             const ticketId = document.getElementById(`huidigTicket-${kamerId}`).getAttribute('data-ticket-id');
-            
             const { value: notitie } = await Swal.fire({
                 title: 'Afronden',
                 input: 'text',
-                inputLabel: 'Opmerking toevoegen', // Hier staat je nieuwe tekst
+                inputLabel: 'Opmerking toevoegen',
                 inputPlaceholder: 'Typ hier een notitie (optioneel)...',
                 showCancelButton: true,
                 confirmButtonText: 'Archiveren',
-                confirmButtonColor: '#1cc88a',
+                confirmButtonColor: '#87C038', // Succes groen
                 cancelButtonText: 'Annuleren',
-                // Deze optie zorgt dat de input niet te breed wordt:
-                customClass: {
-                    input: 'swal-input-fix'
-                }
+                customClass: { input: 'swal-input-fix' }
             });
 
             if (notitie !== undefined) {
@@ -296,6 +320,7 @@ window.toonAfhandelen = async (kamerId) => {
                 });
             }
         };
+
         window.terugNaarWachtrij = async (kamerId) => {
              const ticketId = document.getElementById(`huidigTicket-${kamerId}`).getAttribute('data-ticket-id');
              if(confirm("Terugzetten in wachtrij?")) {
@@ -312,7 +337,8 @@ window.toonAfhandelen = async (kamerId) => {
                 input: 'text',
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#d33'
+                confirmButtonColor: '#d33',
+                customClass: { input: 'swal-input-fix' }
             });
 
             if (text === "RESET") {
