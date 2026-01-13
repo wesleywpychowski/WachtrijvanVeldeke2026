@@ -3,23 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <title>Admin Dashboard Pro</title>
-    <style>
-        * {
-            box-sizing: border-box;
-        }
-    </style>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
-        /* --- NIEUWE STIJLEN VOOR CORRECTE UITLIJNING --- */
+        /* Zorgt dat padding en borders binnen de afmetingen vallen */
+        * {
+            box-sizing: border-box;
+        }
+
+        /* --- STIJLEN VOOR DE LAYOUT --- */
 
         /* Het rooster voor de lokalen */
         .kamer-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 15px; /* Iets meer ruimte tussen de blokken */
+            gap: 15px;
         }
 
         /* De Compacte Kamer Kaart */
@@ -27,7 +27,7 @@
             background: white;
             border: 1px solid #ddd;
             border-radius: 8px;
-            padding: 15px; /* Iets meer ademruimte */
+            padding: 15px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
             display: flex;
             flex-direction: column;
@@ -48,22 +48,46 @@
             color: #333;
         }
 
-        /* Status Badge Correctie */
+        /* Status Badge */
         .status-badge {
             font-size: 0.8rem;
-            padding: 4px 0; /* Alleen hoogte padding, breedte gaat auto */
+            padding: 4px 0;
             border-radius: 4px;
             font-weight: bold;
             text-align: center;
             margin: 5px 0 10px 0;
-            display: block; /* Zorgt dat hij de hele breedte pakt */
-            width: 100%;    /* Pakt 100% van de container (minus padding door border-box) */
+            display: block;
+            width: 100%;
         }
 
         .badge-vrij { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .badge-bezet { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
 
-        /* Wachtrij Item Correctie */
+        /* --- AANPASSING 1: SCROLLBARE WACHTRIJ --- */
+        #wachtrijLijst {
+            /* Hoogte van ca. 5 items (5 * ~85px) */
+            max-height: 450px; 
+            overflow-y: auto; /* Scrollbalk tonen indien nodig */
+            padding-right: 5px; /* Voorkom dat content onder scrollbalk verdwijnt */
+        }
+
+        /* Scrollbalk netjes stylen (optioneel, voor moderne browsers) */
+        #wachtrijLijst::-webkit-scrollbar {
+            width: 8px;
+        }
+        #wachtrijLijst::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        #wachtrijLijst::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 4px;
+        }
+        #wachtrijLijst::-webkit-scrollbar-thumb:hover {
+            background: #aaa;
+        }
+
+        /* Wachtrij Item Card */
         .wachtrij-card {
             background: white;
             border: 1px solid #eee;
@@ -72,30 +96,30 @@
             margin-bottom: 10px;
             display: flex;
             align-items: center;
-            justify-content: space-between; /* Duwt links en rechts uit elkaar */
+            justify-content: space-between;
             gap: 10px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
 
         .wachtrij-content {
-            flex: 1; /* Neemt alle beschikbare ruimte in */
+            flex: 1;
             display: flex;
             align-items: center;
             gap: 10px;
-            overflow: hidden; /* Voorkomt dat tekst de knoppen wegdrukt */
+            overflow: hidden;
         }
 
         .wachtrij-actions {
             display: flex;
             flex-direction: column;
             gap: 5px;
-            flex-shrink: 0; /* Zorgt dat knoppen niet krimpen */
+            flex-shrink: 0;
         }
 
-        /* Algemene knop stijlen in de kaartjes */
         .btn-icon {
             padding: 4px 8px;
             font-size: 0.9rem;
+            cursor: pointer;
         }
 
         .ticket-nummer-cirkel {
@@ -110,6 +134,14 @@
             justify-content: center; 
             border-radius: 50%;
             flex-shrink: 0;
+        }
+
+        /* Hulpklasse voor perfect gecentreerde iconen in vierkante knoppen */
+        .btn-centered-icon {
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            padding: 0 !important; /* Reset padding zodat flexbox het werk doet */
         }
     </style>
 </head>
@@ -183,6 +215,7 @@
                 div.className = "kamer-box";
                 div.id = `kamerBox-${i}`; 
                 
+                // --- AANPASSING 2: Class 'btn-centered-icon' toegevoegd aan de lijst-knop ---
                 div.innerHTML = `
                     <div class="kamer-header">
                         <h3 id="titel-${i}">${huidigeNaam}</h3>
@@ -200,7 +233,10 @@
                             <button class="btn-primary" onclick="roepVolgende(${i})" style="flex:1;">
                                 <i class="fas fa-bullhorn"></i> Roep
                             </button>
-                            <button class="btn-primary" onclick="kiesUitLijst(${i})" style="background:#4e73df; opacity:0.8; width: 40px;" title="Kies specifiek">
+                            
+                            <button class="btn-primary btn-centered-icon" onclick="kiesUitLijst(${i})" 
+                                    style="background:#4e73df; opacity:0.8; width: 40px;" 
+                                    title="Kies specifiek">
                                 <i class="fas fa-list"></i>
                             </button>
                         </div>
@@ -218,7 +254,7 @@
             }
         }
 
-        // 3. RENDER WACHTRIJ (Aangepaste Flexbox)
+        // 3. RENDER WACHTRIJ
         const qWacht = query(collection(db, "tickets"), where("status", "==", "wachtend"), orderBy("timestamp"));
         
         onSnapshot(qWacht, (snapshot) => {
@@ -247,7 +283,7 @@
                 }
 
                 const div = document.createElement("div");
-                div.className = "wachtrij-card"; // Nieuwe class gebruikt
+                div.className = "wachtrij-card";
                 
                 div.innerHTML = `
                     <div class="wachtrij-content">
@@ -269,7 +305,7 @@
             });
         }
 
-        // 4. LOGICA (Ongewijzigd, alleen UI verbeterd)
+        // 4. LOGICA
         const qBezig = query(collection(db, "tickets"), where("status", "==", "bezig"));
         onSnapshot(qBezig, (snapshot) => {
             for(let i=1; i<=10; i++) resetKamerUI(i);
