@@ -191,36 +191,42 @@
             }
         };
 
-       // --- VERBETERDE EXPORT FUNCTIE (Excel Proof) ---
+     // --- EXPORT FUNCTIE (Met gesplitste Datum en Tijd) ---
         window.exporteerNaarCSV = () => {
             if(window.archiefData.length === 0) {
                 Swal.fire('Leeg', 'Geen data om te exporteren.', 'info');
                 return;
             }
 
-            // 1. Voeg een "BOM" toe. Dit vertelt Excel dat het bestand UTF-8 is (voor tekens als é, ë, etc.)
+            // 1. BOM voor Excel (zodat é en ë werken)
             let csvContent = "\uFEFF"; 
             
-            // 2. Headers gescheiden door PUNTKOMMA (;) voor Belgische Excel
-            csvContent += "Nummer;Datum/Tijd;Bezoeker Opmerking;Kamer;Admin Notitie\r\n"; 
+            // 2. HEADER AANGEPAST: Nu 'Datum' én 'Tijd' apart
+            csvContent += "Nummer;Datum;Tijd;Bezoeker Opmerking;Kamer;Admin Notitie\r\n"; 
 
             window.archiefData.forEach(row => {
-                // Tijd formatteren naar Belgische standaard
-                let tijd = row.timestamp ? row.timestamp.toDate().toLocaleString('nl-BE') : "-";
+                let datum = "-";
+                let klokTijd = "-";
+
+                // We splitsen de timestamp hier in tweeën
+                if(row.timestamp) {
+                    const dateObj = row.timestamp.toDate();
+                    // Alleen de datum (bijv. 13/01/2026)
+                    datum = dateObj.toLocaleDateString('nl-BE');
+                    // Alleen de tijd (bijv. 10:30)
+                    klokTijd = dateObj.toLocaleTimeString('nl-BE', {hour: '2-digit', minute:'2-digit'});
+                }
                 
-                // Tekst opschonen: 
-                // - Vervang puntkomma's in de tekst door spaties (anders breekt de kolom)
-                // - Vervang enters door spaties
+                // Tekst opschonen
                 let opm = (row.opmerking || "").replace(/;/g, " ").replace(/\n/g, " ");
                 let notitie = (row.adminNotitie || "").replace(/;/g, " ").replace(/\n/g, " ");
                 let kamer = (row.kamer || "").replace(/;/g, " ");
                 
-                // 3. Data toevoegen met puntkomma's en tussen aanhalingstekens
-                // De " " zorgen ervoor dat Excel het zeker als tekst ziet en niet per ongeluk splitst
-                csvContent += `"${row.nummer}";"${tijd}";"${opm}";"${kamer}";"${notitie}"\r\n`;
+                // 3. RIJ TOEVOEGEN: Datum en Kloktijd in aparte kolommen
+                csvContent += `"${row.nummer}";"${datum}";"${klokTijd}";"${opm}";"${kamer}";"${notitie}"\r\n`;
             });
 
-            // Download triggeren (Blob is beter voor speciale tekens)
+            // Download triggeren
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             const url = URL.createObjectURL(blob);
