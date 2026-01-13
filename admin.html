@@ -58,6 +58,7 @@
         // --- VARIABELEN ---
         let wachtrijData = []; 
         let kamerNamen = {};
+        let laatsteWachtrijSnapshot = null; // Bewaren voor de timer update
 
         // --- 1. INITIALISATIE ---
         async function laadKamerNamen() {
@@ -73,6 +74,13 @@
             }
         }
         laadKamerNamen();
+
+        // TIMER LOOP: Elke 60 seconden de wachttijden updaten
+        setInterval(() => {
+            if(laatsteWachtrijSnapshot) {
+                renderWachtrij(laatsteWachtrijSnapshot);
+            }
+        }, 60000);
 
         // --- 2. RENDER DE 10 KAMERS ---
         function renderKamers() {
@@ -120,7 +128,14 @@
 
         // --- 3. LUISTERAAR WACHTRIJ ---
         const qWacht = query(collection(db, "tickets"), where("status", "==", "wachtend"), orderBy("timestamp"));
+        
         onSnapshot(qWacht, (snapshot) => {
+            laatsteWachtrijSnapshot = snapshot; // Opslaan voor de timer loop
+            renderWachtrij(snapshot);
+        });
+
+        // Aparte functie om te renderen (zodat we die ook kunnen aanroepen in de timer)
+        function renderWachtrij(snapshot) {
             wachtrijData = [];
             const lijst = document.getElementById("wachtrijLijst");
             document.getElementById("aantalWachtend").innerText = snapshot.size;
@@ -130,8 +145,16 @@
 
             snapshot.forEach((docSnap) => {
                 const data = docSnap.data();
-                // Sla op in geheugen voor popups
                 wachtrijData.push({ id: docSnap.id, ...data });
+
+                // BEREKEN WACHTTIJD
+                let wachttijdTekst = "Net begonnen";
+                if(data.timestamp) {
+                    const aanmaakTijd = data.timestamp.toDate();
+                    const nu = new Date();
+                    const minuten = Math.floor((nu - aanmaakTijd) / 60000);
+                    wachttijdTekst = `${minuten} min gewacht`;
+                }
 
                 const div = document.createElement("div");
                 div.className = "card status-wachtend";
@@ -140,7 +163,9 @@
                         <div style="font-size: 24px; font-weight: bold; color: var(--primary); background: #ebf3ff; width: 50px; height: 50px; display:flex; align-items:center; justify-content:center; border-radius:50%;">${data.nummer}</div>
                         <div style="flex:1;">
                             <div style="font-weight:600;">${data.opmerking || '<em style="color:#ccc">Geen opmerking</em>'}</div>
-                            <small style="color:#888;">Wachtend...</small>
+                            <div style="color:var(--danger); font-size:12px; font-weight:bold; margin-top:2px;">
+                                <i class="far fa-clock"></i> ${wachttijdTekst}
+                            </div>
                         </div>
                     </div>
                     
@@ -151,7 +176,7 @@
                 `;
                 lijst.appendChild(div);
             });
-        });
+        }
 
         // --- 4. LUISTERAAR KAMERS ---
         const qBezig = query(collection(db, "tickets"), where("status", "==", "bezig"));
@@ -197,9 +222,7 @@
 
         // --- 5. INTERACTIE FUNCTIES ---
 
-        // NIEUWE FUNCTIE: OPMERKING AANPASSEN
         window.pasOpmerkingAanTicket = async (ticketId) => {
-            // Zoek de huidige tekst in onze lokale lijst
             const ticketData = wachtrijData.find(t => t.id === ticketId);
             const huidigeTekst = ticketData ? ticketData.opmerking : "";
 
@@ -209,7 +232,7 @@
                 inputValue: huidigeTekst,
                 showCancelButton: true,
                 inputPlaceholder: 'Naam of opmerking...',
-                customClass: { input: 'swal-input-fix' } // Gebruikt jouw fix van daarnet
+                customClass: { input: 'swal-input-fix' }
             });
 
             if (nieuweTekst !== undefined) {
@@ -256,10 +279,20 @@
             }
             let htmlLijst = '<div style="text-align:left; max-height:300px; overflow-y:auto;">';
             wachtrijData.forEach(t => {
+                // Ook in de popup laten we de wachttijd zien, dat is handig bij het kiezen!
+                let wachttijdTekst = "0 min";
+                if(t.timestamp) {
+                    const min = Math.floor((new Date() - t.timestamp.toDate()) / 60000);
+                    wachttijdTekst = min + " min";
+                }
+
                 htmlLijst += `
                     <div onclick="kiesSpecifiek('${t.id}', ${kamerId})" 
                          style="padding:10px; border-bottom:1px solid #eee; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-                         <span><strong>Nr. ${t.nummer}</strong> (${t.opmerking || ''})</span>
+                         <div>
+                            <strong>Nr. ${t.nummer}</strong> (${t.opmerking || ''})<br>
+                            <span style="font-size:11px; color:red;">${wachttijdTekst} gewacht</span>
+                         </div>
                          <button class="btn-primary btn-icon">Kies</button>
                     </div>`;
             });
@@ -308,7 +341,7 @@
                 inputPlaceholder: 'Typ hier een notitie (optioneel)...',
                 showCancelButton: true,
                 confirmButtonText: 'Archiveren',
-                confirmButtonColor: '#87C038', // Succes groen
+                confirmButtonColor: '#87C038',
                 cancelButtonText: 'Annuleren',
                 customClass: { input: 'swal-input-fix' }
             });
