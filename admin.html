@@ -3,79 +3,127 @@
 <head>
     <meta charset="UTF-8">
     <title>Admin Dashboard Pro</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+    </style>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
-        /* Zorgt dat de kamers in een rooster staan i.p.v. onder elkaar */
+        /* --- NIEUWE STIJLEN VOOR CORRECTE UITLIJNING --- */
+
+        /* Het rooster voor de lokalen */
         .kamer-grid {
             display: grid;
-            /* Vakjes zijn minimaal 220px breed, passen zoveel mogelijk op 1 rij */
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 10px;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px; /* Iets meer ruimte tussen de blokken */
         }
 
-        /* Compactere kaart stijl */
+        /* De Compacte Kamer Kaart */
         .kamer-box {
             background: white;
             border: 1px solid #ddd;
             border-radius: 8px;
-            padding: 10px; /* Minder witruimte */
+            padding: 15px; /* Iets meer ademruimte */
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            min-height: 160px; /* Zorgt dat ze allemaal ongeveer even hoog zijn */
+            min-height: 180px;
+        }
+
+        .kamer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
         }
 
         .kamer-box h3 {
             font-size: 1.1rem;
             margin: 0;
+            color: #333;
         }
 
-        /* Status badge iets kleiner */
+        /* Status Badge Correctie */
         .status-badge {
-            font-size: 0.75rem;
-            padding: 2px 6px;
+            font-size: 0.8rem;
+            padding: 4px 0; /* Alleen hoogte padding, breedte gaat auto */
             border-radius: 4px;
             font-weight: bold;
             text-align: center;
-            margin-top: 5px;
-            display: inline-block;
-            width: 100%;
+            margin: 5px 0 10px 0;
+            display: block; /* Zorgt dat hij de hele breedte pakt */
+            width: 100%;    /* Pakt 100% van de container (minus padding door border-box) */
         }
 
-        .badge-vrij { background-color: #d4edda; color: #155724; }
-        .badge-bezet { background-color: #f8d7da; color: #721c24; }
+        .badge-vrij { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .badge-bezet { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
 
-        /* Knoppen iets compacter maken in de grid */
-        .kamer-box button {
-            padding: 5px 10px;
+        /* Wachtrij Item Correctie */
+        .wachtrij-card {
+            background: white;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between; /* Duwt links en rechts uit elkaar */
+            gap: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .wachtrij-content {
+            flex: 1; /* Neemt alle beschikbare ruimte in */
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            overflow: hidden; /* Voorkomt dat tekst de knoppen wegdrukt */
+        }
+
+        .wachtrij-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            flex-shrink: 0; /* Zorgt dat knoppen niet krimpen */
+        }
+
+        /* Algemene knop stijlen in de kaartjes */
+        .btn-icon {
+            padding: 4px 8px;
             font-size: 0.9rem;
+        }
+
+        .ticket-nummer-cirkel {
+            font-size: 18px; 
+            font-weight: bold; 
+            color: var(--primary); 
+            background: #ebf3ff; 
+            width: 40px; 
+            height: 40px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            border-radius: 50%;
+            flex-shrink: 0;
         }
     </style>
 </head>
 <body>
     
     <nav style="background: white; padding: 15px 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; align-items: center;">
-        
         <div style="font-weight: bold; font-size: 20px; color: var(--primary);">
             <i class="fas fa-user-shield"></i> Admin
         </div>
-
         <div class="nav-links">
-            <a href="kiosk.html" target="_blank" class="nav-item" title="Open Kiosk in nieuw tabblad">
-                <i class="fas fa-tablet-alt"></i> Kiosk
-            </a>
-            <a href="weergave.html" target="_blank" class="nav-item" title="Open TV Scherm in nieuw tabblad">
-                <i class="fas fa-tv"></i> Scherm
-            </a>
-            <a href="archief.html" class="nav-item" title="Ga naar Archief">
-                <i class="fas fa-archive"></i> Archief
-            </a>
+            <a href="kiosk.html" target="_blank" class="nav-item"><i class="fas fa-tablet-alt"></i> Kiosk</a>
+            <a href="weergave.html" target="_blank" class="nav-item"><i class="fas fa-tv"></i> Scherm</a>
+            <a href="archief.html" class="nav-item"><i class="fas fa-archive"></i> Archief</a>
         </div>
-
         <button onclick="resetSysteem()" class="btn-danger" style="margin-left: 0;">
             <i class="fas fa-trash-alt"></i> Reset
         </button>
@@ -84,7 +132,7 @@
     <div class="container">
         <div class="grid">
             
-            <div class="column" style="flex: 1;">
+            <div class="column" style="flex: 1; min-width: 300px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h2><i class="fas fa-clock"></i> Wachtrij</h2>
                     <span id="aantalWachtend" style="background: var(--primary); color: white; padding: 2px 8px; border-radius: 10px; font-size: 12px;">0</span>
@@ -92,7 +140,7 @@
                 <div id="wachtrijLijst">Laden...</div>
             </div>
 
-            <div class="column" style="flex: 3;">
+            <div class="column" style="flex: 2;">
                 <h2><i class="fas fa-door-open"></i> Lokalen Beheer</h2>
                 <div id="kamersLijst" class="kamer-grid">
                     </div>
@@ -104,33 +152,26 @@
         import { db } from './firebase-config.js';
         import { collection, onSnapshot, query, where, orderBy, limit, updateDoc, doc, setDoc, getDocs, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // --- VARIABELEN ---
         let wachtrijData = []; 
         let kamerNamen = {};
         let laatsteWachtrijSnapshot = null; 
 
-        // --- 1. INITIALISATIE ---
+        // 1. INITIALISATIE
         async function laadKamerNamen() {
             try {
                 const docRef = doc(db, "settings", "kamernamen");
                 const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    kamerNamen = docSnap.data();
-                }
+                if (docSnap.exists()) kamerNamen = docSnap.data();
                 renderKamers(); 
-            } catch (e) {
-                renderKamers();
-            }
+            } catch (e) { renderKamers(); }
         }
         laadKamerNamen();
 
         setInterval(() => {
-            if(laatsteWachtrijSnapshot) {
-                renderWachtrij(laatsteWachtrijSnapshot);
-            }
+            if(laatsteWachtrijSnapshot) renderWachtrij(laatsteWachtrijSnapshot);
         }, 60000);
 
-        // --- 2. RENDER DE 10 KAMERS (AANGEPAST VOOR COMPACTHEID) ---
+        // 2. RENDER KAMERS (Aangepast Grid)
         function renderKamers() {
             const container = document.getElementById("kamersLijst");
             container.innerHTML = "";
@@ -142,20 +183,19 @@
                 div.className = "kamer-box";
                 div.id = `kamerBox-${i}`; 
                 
-                // Hieronder is de HTML compacter gemaakt
                 div.innerHTML = `
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div class="kamer-header">
                         <h3 id="titel-${i}">${huidigeNaam}</h3>
                         <i class="fas fa-pencil-alt" style="cursor:pointer; color:#ccc; font-size:12px;" onclick="pasNaamAan(${i})"></i>
                     </div>
                     
                     <div id="statusBadge-${i}" class="status-badge badge-vrij">BESCHIKBAAR</div>
                     
-                    <div style="text-align: center;">
-                        <h1 id="huidigTicket-${i}" style="font-size: 28px; margin: 10px 0; color: #ccc;">--</h1>
+                    <div style="text-align: center; flex-grow: 1; display: flex; align-items: center; justify-content: center;">
+                        <h1 id="huidigTicket-${i}" style="font-size: 32px; margin: 0; color: #ccc;">--</h1>
                     </div>
                     
-                    <div style="display: flex; gap: 5px; justify-content: center; flex-wrap: wrap; margin-top: auto;">
+                    <div style="margin-top: 10px;">
                         <div id="roepGroep-${i}" style="display:flex; gap:5px; width:100%;">
                             <button class="btn-primary" onclick="roepVolgende(${i})" style="flex:1;">
                                 <i class="fas fa-bullhorn"></i> Roep
@@ -169,7 +209,7 @@
                             <i class="fas fa-check"></i> Klaar
                         </button>
                         
-                        <button id="terugBtn-${i}" class="btn-warning" onclick="terugNaarWachtrij(${i})" style="display:none; width:100%;">
+                        <button id="terugBtn-${i}" class="btn-warning" onclick="terugNaarWachtrij(${i})" style="display:none; width:100%; margin-top: 5px;">
                             <i class="fas fa-undo"></i> Terug
                         </button>
                     </div>
@@ -178,7 +218,7 @@
             }
         }
 
-        // --- 3. LUISTERAAR WACHTRIJ ---
+        // 3. RENDER WACHTRIJ (Aangepaste Flexbox)
         const qWacht = query(collection(db, "tickets"), where("status", "==", "wachtend"), orderBy("timestamp"));
         
         onSnapshot(qWacht, (snapshot) => {
@@ -207,31 +247,32 @@
                 }
 
                 const div = document.createElement("div");
-                div.className = "card status-wachtend";
+                div.className = "wachtrij-card"; // Nieuwe class gebruikt
+                
                 div.innerHTML = `
-                    <div style="display:flex; align-items:center; gap: 10px;">
-                        <div style="font-size: 18px; font-weight: bold; color: var(--primary); background: #ebf3ff; width: 40px; height: 40px; display:flex; align-items:center; justify-content:center; border-radius:50%;">${data.nummer}</div>
-                        <div style="flex:1;">
-                            <div style="font-weight:600; font-size: 0.9rem;">${data.opmerking || '<em style="color:#ccc">...</em>'}</div>
+                    <div class="wachtrij-content">
+                        <div class="ticket-nummer-cirkel">${data.nummer}</div>
+                        <div>
+                            <div style="font-weight:600; font-size: 0.95rem;">${data.opmerking || '<em style="color:#ccc">...</em>'}</div>
                             <div style="color:var(--danger); font-size:11px; font-weight:bold;">
                                 <i class="far fa-clock"></i> ${wachttijdTekst}
                             </div>
                         </div>
-                         <div style="display:flex; flex-direction:column; gap:2px;">
-                            <button onclick="verwijderTicket('${docSnap.id}')" class="btn-danger btn-icon" style="padding:2px 5px;"><i class="fas fa-times"></i></button>
-                            <button onclick="pasOpmerkingAanTicket('${docSnap.id}')" class="btn-primary btn-icon" style="background-color: var(--secondary); padding:2px 5px;"><i class="fas fa-pencil-alt"></i></button>
-                        </div>
+                    </div>
+                    
+                    <div class="wachtrij-actions">
+                        <button onclick="verwijderTicket('${docSnap.id}')" class="btn-danger btn-icon" title="Verwijderen"><i class="fas fa-times"></i></button>
+                        <button onclick="pasOpmerkingAanTicket('${docSnap.id}')" class="btn-primary btn-icon" style="background-color: var(--secondary);" title="Aanpassen"><i class="fas fa-pencil-alt"></i></button>
                     </div>
                 `;
                 lijst.appendChild(div);
             });
         }
 
-        // --- 4. LUISTERAAR KAMERS ---
+        // 4. LOGICA (Ongewijzigd, alleen UI verbeterd)
         const qBezig = query(collection(db, "tickets"), where("status", "==", "bezig"));
         onSnapshot(qBezig, (snapshot) => {
             for(let i=1; i<=10; i++) resetKamerUI(i);
-
             snapshot.forEach(docSnap => {
                 const ticket = docSnap.data();
                 const kId = ticket.kamerId;
@@ -269,25 +310,18 @@
             document.getElementById(`terugBtn-${id}`).style.display = 'none';
         }
 
-        // --- 5. INTERACTIE FUNCTIES ---
-
         window.pasOpmerkingAanTicket = async (ticketId) => {
             const ticketData = wachtrijData.find(t => t.id === ticketId);
             const huidigeTekst = ticketData ? ticketData.opmerking : "";
-
             const { value: nieuweTekst } = await Swal.fire({
                 title: 'Opmerking aanpassen',
                 input: 'text',
                 inputValue: huidigeTekst,
                 showCancelButton: true,
-                inputPlaceholder: 'Naam of opmerking...',
                 customClass: { input: 'swal-input-fix' }
             });
-
             if (nieuweTekst !== undefined) {
-                await updateDoc(doc(db, "tickets", ticketId), {
-                    opmerking: nieuweTekst
-                });
+                await updateDoc(doc(db, "tickets", ticketId), { opmerking: nieuweTekst });
             }
         }
 
@@ -300,7 +334,6 @@
                 showCancelButton: true,
                 customClass: { input: 'swal-input-fix' }
             });
-
             if (nieuweNaam) {
                 kamerNamen[kamerId] = nieuweNaam;
                 document.getElementById(`titel-${kamerId}`).innerText = nieuweNaam;
@@ -312,7 +345,6 @@
             const kamerNaam = kamerNamen[kamerId] || `Kamer ${kamerId}`;
             const qOudste = query(collection(db, "tickets"), where("status", "==", "wachtend"), orderBy("timestamp"), limit(1));
             const snapshot = await getDocs(qOudste);
-            
             if (!snapshot.empty) {
                 toewijzenAanKamer(snapshot.docs[0].id, kamerId, kamerNaam);
             } else {
@@ -333,7 +365,6 @@
                     const min = Math.floor((new Date() - t.timestamp.toDate()) / 60000);
                     wachttijdTekst = min + " min";
                 }
-
                 htmlLijst += `
                     <div onclick="kiesSpecifiek('${t.id}', ${kamerId})" 
                          style="padding:10px; border-bottom:1px solid #eee; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
@@ -345,7 +376,6 @@
                     </div>`;
             });
             htmlLijst += '</div>';
-
             Swal.fire({
                 title: `Wie roept ${kamerNaam} op?`,
                 html: htmlLijst,
@@ -393,7 +423,6 @@
                 cancelButtonText: 'Annuleren',
                 customClass: { input: 'swal-input-fix' }
             });
-
             if (notitie !== undefined) {
                 await updateDoc(doc(db, "tickets", ticketId), {
                     status: 'afgehandeld',
@@ -421,7 +450,6 @@
                 confirmButtonColor: '#d33',
                 customClass: { input: 'swal-input-fix' }
             });
-
             if (text === "RESET") {
                 Swal.showLoading();
                 const qAlle = query(collection(db, "tickets"));
