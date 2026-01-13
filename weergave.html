@@ -2,324 +2,56 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <title>Wachtrij Scherm</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weergave Scherm</title>
     <style>
-        /* LAYOUT */
-        body { 
-            background-color: var(--light); 
-            color: var(--dark); 
-            display: flex; 
-            flex-direction: column; 
-            height: 100vh; 
-            overflow: hidden;
-            font-family: 'Poppins', sans-serif;
-        }
-
-        /* HEADER */
-        .header {
-            background: white;
-            padding: 10px 30px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f9;
             display: flex;
-            justify-content: space-between; /* Verdeelt logo - titel - klok */
+            justify-content: center;
             align-items: center;
-            z-index: 10;
-            height: 80px; 
+            height: 100vh;
+            margin: 0;
         }
 
-        /* NIEUW: TITEL IN HET MIDDEN */
-        .header-title {
-            font-size: 2.5rem;
-            font-weight: 800;
-            color: var(--primary); /* Schoolkleur */
-            text-transform: uppercase;
-            letter-spacing: 2px;
+        .container {
+            background-color: white;
+            padding: 50px 80px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
             text-align: center;
         }
 
-        /* KLOK STIJL */
-        #klok {
+        .message {
             font-size: 2rem;
-            color: var(--dark);
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background: #f4f4f9;
-            padding: 5px 20px;
-            border-radius: 10px;
-        }
-
-        /* MAIN CONTAINER */
-        .split-container {
-            display: flex;
-            flex: 1; 
-            height: calc(100vh - 80px); 
-        }
-
-        /* --- LINKER KANT: GROOT (65%) --- */
-        .left-panel {
-            flex: 0 0 65%;
-            background: white;
-            display: flex;
-            flex-direction: column;
-            justify-content: center; 
-            align-items: center;
-            border-right: 1px solid #eee;
-            position: relative;
-            text-align: center;
-        }
-
-        .label-boven {
-            font-size: 2.5rem;
+            color: #333;
+            margin-bottom: 20px;
             font-weight: 600;
-            color: #999;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-bottom: 0px;
+            /* Extra zekerheid voor hoofdletters via CSS */
+            text-transform: uppercase; 
         }
 
-        .groot-nummer {
-            font-size: 18rem;
-            font-weight: 800;
-            color: #d14977; 
-            line-height: 1;
-            margin: 10px 0;
-            text-shadow: none; 
-        }
-
-        .label-midden {
-            font-size: 2.5rem;
-            color: #666;
-            margin-bottom: 10px;
-            font-weight: 400;
-        }
-
-        .groot-kamer {
-            font-size: 5rem;
-            color: var(--dark);
-            font-weight: 800; 
-            line-height: 1.1;
-        }
-        
-
-        /* --- RECHTER KANT: LIJST (35%) --- */
-        .right-panel {
-            flex: 1; 
-            background: #f8f9fc;
-            padding: 20px;
-            overflow-y: auto; 
-            display: flex;
-            flex-direction: column;
-            gap: 8px; 
-            border-left: 1px solid #ddd;
-        }
-
-        .right-header {
-            color: var(--secondary);
-            font-size: 1.8rem;
-            font-weight: 600;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #e3e6f0;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        /* KAARTJES RECHTS */
-        .list-card {
-            background: white;
-            padding: 8px 15px; 
-            border-radius: 6px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-left: 5px solid #ccc; 
-            animation: slideInRight 0.5s ease;
-        }
-        
-        .list-card.active-now {
-            border-left: 5px solid #d14977;
-            background-color: #fff0f5; 
-        }
-
-        .list-nummer {
-            font-size: 2rem; 
+        .lokaal-nummer {
+            font-size: 6rem;
             font-weight: bold;
-            color: #555;
-            display: flex;
-            align-items: baseline;
-            gap: 10px;
-        }
-        
-        .timer-text {
-            font-size: 1rem;
-            font-weight: normal;
-            color: #999;
-        }
-        
-        .list-kamer {
-            font-size: 1.1rem;
-            color: #888;
-            text-align: right;
-        }
-
-        /* ANIMATIES */
-        @keyframes slideInRight {
-            from { opacity: 0; transform: translateX(20px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); } 
-            100% { transform: scale(1); }
-        }
-
-        #startOverlay {
-            background: rgba(255,255,255,0.98); 
+            color: #007bff;
+            margin: 0;
         }
     </style>
 </head>
 <body>
 
-    <div id="startOverlay" style="position: fixed; top:0; left:0; width:100%; height:100%; z-index:99; display:flex; justify-content:center; align-items:center; flex-direction:column;">
-        <img src="Logovv.jpg" style="width: 150px; margin-bottom: 20px;">
-        <h1 style="color: var(--primary);">Klik om scherm te starten</h1>
-        <button onclick="startScherm()" class="btn-primary" style="font-size:24px; padding:20px 40px;">START SCHERM</button>
-    </div>
-
-    <div class="header">
-        <img src="Logovv.jpg" alt="Logo" style="height: 60px;">
+    <div class="container">
+        <div class="message">GA NAAR LOKAAL</div>
         
-        <div class="header-title">Wachtrij inschrijvingen</div>
-
-        <div id="klok"><i class="far fa-clock"></i> --:--</div>
-    </div>
-    
-    <div class="split-container">
-        
-        <div class="left-panel" id="linksPaneel">
-            <div class="label-boven">Volgnummer</div>
-            <div class="groot-nummer" id="grootNummer">--</div>
-            <div class="label-midden">ga naar lokaal</div>
-            <div class="groot-kamer" id="grootKamer">...</div>
-        </div>
-
-        <div class="right-panel">
-            <div class="right-header">
-                <i class="fas fa-list-ul"></i> In behandeling
-            </div>
-            <div id="rechterLijst">
-                </div>
-        </div>
-
+        <div class="lokaal-nummer" id="lokaal">101</div>
     </div>
 
-    <script type="module">
-        import { db } from './firebase-config.js';
-        import { collection, onSnapshot, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-        const audio = new Audio('dingdong.mp3');
-        let eersteKeerLaden = true;
-        let laatsteSnapshot = null; 
-
-        // Live Klok
-        setInterval(() => {
-            const nu = new Date();
-            document.getElementById('klok').innerHTML = `<i class="far fa-clock"></i> ${nu.toLocaleTimeString('nl-BE', {hour: '2-digit', minute:'2-digit'})}`;
-        }, 1000);
-
-        // Timer Loop (1 min)
-        setInterval(() => {
-            if(laatsteSnapshot) {
-                renderRechterLijst(laatsteSnapshot);
-            }
-        }, 60000); 
-
-        window.startScherm = () => {
-            document.getElementById('startOverlay').style.display = 'none';
-            startLuisteren();
-        };
-
-        function startLuisteren() {
-            const q = query(
-                collection(db, "tickets"), 
-                where("status", "==", "bezig"), 
-                orderBy("startTijd", "desc")
-            );
-
-            onSnapshot(q, (snapshot) => {
-                laatsteSnapshot = snapshot; 
-                
-                snapshot.docChanges().forEach((change) => {
-                    if (change.type === "added" && !eersteKeerLaden) {
-                        audio.play().catch(e => console.log(e));
-                    }
-                });
-
-                if (!snapshot.empty) {
-                    const nieuwste = snapshot.docs[0].data();
-                    
-                    document.getElementById("grootNummer").innerText = `${nieuwste.nummer}`;
-                    
-                    const linksPaneel = document.getElementById("linksPaneel");
-                    linksPaneel.style.animation = 'none';
-                    linksPaneel.offsetHeight; 
-                    linksPaneel.style.animation = 'pulse 0.5s'; 
-                    
-                    document.getElementById("grootKamer").innerText = nieuwste.kamer;
-
-                    renderRechterLijst(snapshot);
-
-                } else {
-                    document.getElementById("grootNummer").innerText = "--";
-                    document.getElementById("grootKamer").innerText = "";
-                    document.getElementById("rechterLijst").innerHTML = "";
-                }
-                eersteKeerLaden = false;
-            });
-        }
-
-        function renderRechterLijst(snapshot) {
-            const container = document.getElementById("rechterLijst");
-            container.innerHTML = "";
-
-            if (snapshot.empty) {
-                container.innerHTML = "<div style='color:#999; text-align:center; margin-top:50px;'>Geen nummers.</div>";
-                return;
-            }
-
-            snapshot.docs.forEach((doc, index) => {
-                const data = doc.data();
-                
-                let minutenBezig = 0;
-                if (data.startTijd) {
-                    const start = data.startTijd.toDate();
-                    const nu = new Date();
-                    const verschil = nu - start;
-                    minutenBezig = Math.floor(verschil / 60000); 
-                }
-
-                const div = document.createElement("div");
-                div.className = index === 0 ? "list-card active-now" : "list-card";
-                
-                div.innerHTML = `
-                    <div class="list-nummer">
-                        Nr. ${data.nummer} 
-                        <span class="timer-text"><i class="fas fa-hourglass-half" style="font-size:12px;"></i> ${minutenBezig} min</span>
-                    </div>
-                    <div class="list-kamer">
-                        <i class="fas fa-door-open" style="font-size:14px;"></i> ${data.kamer}
-                    </div>
-                `;
-                container.appendChild(div);
-            });
-        }
+    <script>
+        // Optioneel: Script om dynamisch data op te halen (bijv. via URL parameters of LocalStorage)
+        // Voor nu staat er statisch '101'
     </script>
+
 </body>
 </html>
