@@ -191,28 +191,44 @@
             }
         };
 
-        // --- EXPORT FUNCTIE ---
+       // --- VERBETERDE EXPORT FUNCTIE (Excel Proof) ---
         window.exporteerNaarCSV = () => {
             if(window.archiefData.length === 0) {
                 Swal.fire('Leeg', 'Geen data om te exporteren.', 'info');
                 return;
             }
 
-            let csvContent = "data:text/csv;charset=utf-8,";
-            csvContent += "Nummer,Datum/Tijd,Bezoeker Opmerking,Kamer,Admin Notitie\r\n"; 
+            // 1. Voeg een "BOM" toe. Dit vertelt Excel dat het bestand UTF-8 is (voor tekens als é, ë, etc.)
+            let csvContent = "\uFEFF"; 
+            
+            // 2. Headers gescheiden door PUNTKOMMA (;) voor Belgische Excel
+            csvContent += "Nummer;Datum/Tijd;Bezoeker Opmerking;Kamer;Admin Notitie\r\n"; 
 
             window.archiefData.forEach(row => {
-                let tijd = row.timestamp ? row.timestamp.toDate().toLocaleString() : "-";
-                let opm = (row.opmerking || "").replace(/,/g, " ").replace(/\n/g, " ");
-                let notitie = (row.adminNotitie || "").replace(/,/g, " ").replace(/\n/g, " ");
+                // Tijd formatteren naar Belgische standaard
+                let tijd = row.timestamp ? row.timestamp.toDate().toLocaleString('nl-BE') : "-";
                 
-                csvContent += `${row.nummer},${tijd},${opm},${row.kamer},${notitie}\r\n`;
+                // Tekst opschonen: 
+                // - Vervang puntkomma's in de tekst door spaties (anders breekt de kolom)
+                // - Vervang enters door spaties
+                let opm = (row.opmerking || "").replace(/;/g, " ").replace(/\n/g, " ");
+                let notitie = (row.adminNotitie || "").replace(/;/g, " ").replace(/\n/g, " ");
+                let kamer = (row.kamer || "").replace(/;/g, " ");
+                
+                // 3. Data toevoegen met puntkomma's en tussen aanhalingstekens
+                // De " " zorgen ervoor dat Excel het zeker als tekst ziet en niet per ongeluk splitst
+                csvContent += `"${row.nummer}";"${tijd}";"${opm}";"${kamer}";"${notitie}"\r\n`;
             });
 
-            const encodedUri = encodeURI(csvContent);
+            // Download triggeren (Blob is beter voor speciale tekens)
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute("href", url);
             link.setAttribute("download", "school_inschrijvingen_archief.csv");
+            link.style.visibility = 'hidden';
+            
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
