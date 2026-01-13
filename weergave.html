@@ -14,7 +14,7 @@
             flex-direction: column; 
             height: 100vh; 
             overflow: hidden;
-            font-family: 'Poppins', sans-serif; /* Zeker zijn van font */
+            font-family: 'Poppins', sans-serif;
         }
 
         /* HEADER */
@@ -36,58 +36,71 @@
             height: calc(100vh - 70px); 
         }
 
-        /* --- LINKER KANT: GROOT (65% breedte) --- */
+        /* --- LINKER KANT: HIER ZIT DE NIEUWE INDELING --- */
         .left-panel {
-            flex: 0 0 65%; /* Vaste breedte van 65% */
+            flex: 0 0 65%; /* 65% breedte */
             background: white;
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: center; 
             align-items: center;
             border-right: 1px solid #eee;
             position: relative;
+            text-align: center;
         }
 
-        .label-nieuw {
-            font-size: 3rem; /* VEEL GROTER */
+        /* 1. Tekst "Volgnummer" */
+        .label-boven {
+            font-size: 2.5rem;
+            font-weight: 600;
+            color: #999;
             text-transform: uppercase;
             letter-spacing: 2px;
-            color: #ccc; /* Neutraal grijs */
-            font-weight: 800;
-            margin-bottom: 20px;
+            margin-bottom: 0px;
         }
 
+        /* 2. Het Nummer zelf */
         .groot-nummer {
-            font-size: 20rem; /* NOG GROTER */
+            font-size: 18rem; /* Iets kleiner gemaakt zodat de rest past */
             font-weight: 800;
             color: #d14977; /* Schoolkleur */
             line-height: 1;
-            margin-bottom: 10px;
-            text-shadow: none !important; /* Zeker weten geen gloed */
+            margin: 10px 0;
+            text-shadow: none; 
         }
 
+        /* 3. Tekst "ga naar lokaal" */
+        .label-midden {
+            font-size: 2.5rem;
+            color: #666;
+            margin-bottom: 10px;
+            font-weight: 400;
+        }
+
+        /* 4. De naam van het lokaal */
         .groot-kamer {
-            font-size: 4rem; /* GROTER */
+            font-size: 5rem; /* Groot en duidelijk */
             color: var(--dark);
-            font-weight: 300;
+            font-weight: 800; /* Vetgedrukt */
+            line-height: 1.1;
         }
         
 
-        /* --- RECHTER KANT: LIJST (35% breedte) --- */
+        /* --- RECHTER KANT: LIJST --- */
         .right-panel {
-            flex: 1; /* Neemt de rest (35%) */
+            flex: 1; 
             background: #f8f9fc;
             padding: 20px;
             overflow-y: auto; 
             display: flex;
             flex-direction: column;
-            gap: 8px; /* Heel compact op elkaar */
+            gap: 8px; 
             border-left: 1px solid #ddd;
         }
 
         .right-header {
             color: var(--secondary);
-            font-size: 1.8rem; /* GROTER */
+            font-size: 1.8rem;
             font-weight: 600;
             margin-bottom: 15px;
             padding-bottom: 10px;
@@ -97,10 +110,10 @@
             gap: 10px;
         }
 
-        /* KAARTJES RECHTS (COMPACT) */
+        /* KAARTJES RECHTS */
         .list-card {
             background: white;
-            padding: 8px 15px; /* Minder padding = compacter */
+            padding: 8px 15px; 
             border-radius: 6px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
             display: flex;
@@ -132,10 +145,9 @@
             to { opacity: 1; transform: translateX(0); }
         }
 
-        /* Alleen schalen, GEEN kleuren/schaduwen */
         @keyframes pulse {
             0% { transform: scale(1); }
-            50% { transform: scale(1.05); } /* Subtiele zoom */
+            50% { transform: scale(1.05); } 
             100% { transform: scale(1); }
         }
 
@@ -161,9 +173,15 @@
     <div class="split-container">
         
         <div class="left-panel" id="linksPaneel">
-            <div class="label-nieuw">Nu aan de beurt</div>
+            
+            <div class="label-boven">Volgnummer</div>
+            
             <div class="groot-nummer" id="grootNummer">--</div>
-            <div class="groot-kamer" id="grootKamer">Wachten...</div>
+            
+            <div class="label-midden">ga naar lokaal</div>
+            
+            <div class="groot-kamer" id="grootKamer">...</div>
+
         </div>
 
         <div class="right-panel">
@@ -183,7 +201,6 @@
         const audio = new Audio('dingdong.mp3');
         let eersteKeerLaden = true;
 
-        // Kleine toevoeging: Live klokje rechtsboven
         setInterval(() => {
             const nu = new Date();
             document.getElementById('klok').innerText = nu.toLocaleTimeString('nl-BE', {hour: '2-digit', minute:'2-digit'});
@@ -221,7 +238,8 @@
                     linksPaneel.offsetHeight; 
                     linksPaneel.style.animation = 'pulse 0.5s'; 
                     
-                    document.getElementById("grootKamer").innerHTML = `<i class="fas fa-arrow-right" style="color:#d14977"></i> ${nieuwste.kamer}`;
+                    // Hier zetten we alleen de naam, de pijl is weg en de tekst "ga naar lokaal" staat er al boven
+                    document.getElementById("grootKamer").innerText = nieuwste.kamer;
 
                     if (snapshot.docs.length > 1) {
                         snapshot.docs.forEach((doc, index) => {
@@ -244,7 +262,7 @@
 
                 } else {
                     document.getElementById("grootNummer").innerText = "--";
-                    document.getElementById("grootKamer").innerText = "Geen oproepen";
+                    document.getElementById("grootKamer").innerText = "";
                     rechterLijst.innerHTML = "";
                 }
                 eersteKeerLaden = false;
