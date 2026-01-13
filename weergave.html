@@ -23,15 +23,25 @@
             padding: 10px 30px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
             display: flex;
-            justify-content: space-between;
+            justify-content: space-between; /* Verdeelt logo - titel - klok */
             align-items: center;
             z-index: 10;
-            height: 80px; /* Iets hoger voor de klok */
+            height: 80px; 
         }
 
-        /* KLOK STIJL (AANGEPAST) */
+        /* NIEUW: TITEL IN HET MIDDEN */
+        .header-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--primary); /* Schoolkleur */
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-align: center;
+        }
+
+        /* KLOK STIJL */
         #klok {
-            font-size: 2rem; /* Groter */
+            font-size: 2rem;
             color: var(--dark);
             font-weight: 700;
             display: flex;
@@ -132,10 +142,9 @@
             animation: slideInRight 0.5s ease;
         }
         
-        /* Highlight voor de bovenste kaart (die ook links staat) */
         .list-card.active-now {
             border-left: 5px solid #d14977;
-            background-color: #fff0f5; /* Heel licht roze achtergrond */
+            background-color: #fff0f5; 
         }
 
         .list-nummer {
@@ -147,7 +156,6 @@
             gap: 10px;
         }
         
-        /* Nieuwe stijl voor de timer */
         .timer-text {
             font-size: 1rem;
             font-weight: normal;
@@ -187,6 +195,9 @@
 
     <div class="header">
         <img src="Logovv.jpg" alt="Logo" style="height: 60px;">
+        
+        <div class="header-title">Wachtrij inschrijvingen</div>
+
         <div id="klok"><i class="far fa-clock"></i> --:--</div>
     </div>
     
@@ -215,20 +226,20 @@
 
         const audio = new Audio('dingdong.mp3');
         let eersteKeerLaden = true;
-        let laatsteSnapshot = null; // We bewaren de data om de timer te kunnen updaten
+        let laatsteSnapshot = null; 
 
-        // 1. Live Klokje
+        // Live Klok
         setInterval(() => {
             const nu = new Date();
             document.getElementById('klok').innerHTML = `<i class="far fa-clock"></i> ${nu.toLocaleTimeString('nl-BE', {hour: '2-digit', minute:'2-digit'})}`;
         }, 1000);
 
-        // 2. Timer Update Loop (Elke minuut de lijst verversen voor de tijd)
+        // Timer Loop (1 min)
         setInterval(() => {
             if(laatsteSnapshot) {
                 renderRechterLijst(laatsteSnapshot);
             }
-        }, 60000); // 60000ms = 1 minuut
+        }, 60000); 
 
         window.startScherm = () => {
             document.getElementById('startOverlay').style.display = 'none';
@@ -243,9 +254,8 @@
             );
 
             onSnapshot(q, (snapshot) => {
-                laatsteSnapshot = snapshot; // Opslaan voor de timer loop
+                laatsteSnapshot = snapshot; 
                 
-                // Geluidje trigger
                 snapshot.docChanges().forEach((change) => {
                     if (change.type === "added" && !eersteKeerLaden) {
                         audio.play().catch(e => console.log(e));
@@ -255,10 +265,8 @@
                 if (!snapshot.empty) {
                     const nieuwste = snapshot.docs[0].data();
                     
-                    // Linker paneel update
                     document.getElementById("grootNummer").innerText = `${nieuwste.nummer}`;
                     
-                    // Pulse effect links
                     const linksPaneel = document.getElementById("linksPaneel");
                     linksPaneel.style.animation = 'none';
                     linksPaneel.offsetHeight; 
@@ -266,7 +274,6 @@
                     
                     document.getElementById("grootKamer").innerText = nieuwste.kamer;
 
-                    // Rechter lijst renderen
                     renderRechterLijst(snapshot);
 
                 } else {
@@ -278,7 +285,6 @@
             });
         }
 
-        // Aparte functie om de lijst te bouwen (zodat we die elke minuut kunnen aanroepen)
         function renderRechterLijst(snapshot) {
             const container = document.getElementById("rechterLijst");
             container.innerHTML = "";
@@ -291,17 +297,15 @@
             snapshot.docs.forEach((doc, index) => {
                 const data = doc.data();
                 
-                // Bereken tijd in minuten
                 let minutenBezig = 0;
                 if (data.startTijd) {
                     const start = data.startTijd.toDate();
                     const nu = new Date();
                     const verschil = nu - start;
-                    minutenBezig = Math.floor(verschil / 60000); // ms naar minuten
+                    minutenBezig = Math.floor(verschil / 60000); 
                 }
 
                 const div = document.createElement("div");
-                // Als het index 0 is (de bovenste), geven we hem een speciale class
                 div.className = index === 0 ? "list-card active-now" : "list-card";
                 
                 div.innerHTML = `
