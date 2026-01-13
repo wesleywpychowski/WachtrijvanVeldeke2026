@@ -6,6 +6,55 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        /* Zorgt dat de kamers in een rooster staan i.p.v. onder elkaar */
+        .kamer-grid {
+            display: grid;
+            /* Vakjes zijn minimaal 220px breed, passen zoveel mogelijk op 1 rij */
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 10px;
+        }
+
+        /* Compactere kaart stijl */
+        .kamer-box {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px; /* Minder witruimte */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 160px; /* Zorgt dat ze allemaal ongeveer even hoog zijn */
+        }
+
+        .kamer-box h3 {
+            font-size: 1.1rem;
+            margin: 0;
+        }
+
+        /* Status badge iets kleiner */
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+            text-align: center;
+            margin-top: 5px;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .badge-vrij { background-color: #d4edda; color: #155724; }
+        .badge-bezet { background-color: #f8d7da; color: #721c24; }
+
+        /* Knoppen iets compacter maken in de grid */
+        .kamer-box button {
+            padding: 5px 10px;
+            font-size: 0.9rem;
+        }
+    </style>
 </head>
 <body>
     
@@ -35,7 +84,7 @@
     <div class="container">
         <div class="grid">
             
-            <div class="column">
+            <div class="column" style="flex: 1;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h2><i class="fas fa-clock"></i> Wachtrij</h2>
                     <span id="aantalWachtend" style="background: var(--primary); color: white; padding: 2px 8px; border-radius: 10px; font-size: 12px;">0</span>
@@ -43,7 +92,7 @@
                 <div id="wachtrijLijst">Laden...</div>
             </div>
 
-            <div class="column">
+            <div class="column" style="flex: 3;">
                 <h2><i class="fas fa-door-open"></i> Lokalen Beheer</h2>
                 <div id="kamersLijst" class="kamer-grid">
                     </div>
@@ -58,7 +107,7 @@
         // --- VARIABELEN ---
         let wachtrijData = []; 
         let kamerNamen = {};
-        let laatsteWachtrijSnapshot = null; // Bewaren voor de timer update
+        let laatsteWachtrijSnapshot = null; 
 
         // --- 1. INITIALISATIE ---
         async function laadKamerNamen() {
@@ -75,14 +124,13 @@
         }
         laadKamerNamen();
 
-        // TIMER LOOP: Elke 60 seconden de wachttijden updaten
         setInterval(() => {
             if(laatsteWachtrijSnapshot) {
                 renderWachtrij(laatsteWachtrijSnapshot);
             }
         }, 60000);
 
-        // --- 2. RENDER DE 10 KAMERS ---
+        // --- 2. RENDER DE 10 KAMERS (AANGEPAST VOOR COMPACTHEID) ---
         function renderKamers() {
             const container = document.getElementById("kamersLijst");
             container.innerHTML = "";
@@ -93,32 +141,36 @@
                 const div = document.createElement("div");
                 div.className = "kamer-box";
                 div.id = `kamerBox-${i}`; 
+                
+                // Hieronder is de HTML compacter gemaakt
                 div.innerHTML = `
-                    <div style="display:flex; justify-content:center; align-items:center; gap:10px;">
-                        <h3 style="margin:0;" id="titel-${i}">${huidigeNaam}</h3>
-                        <i class="fas fa-pencil-alt" style="cursor:pointer; color:#ccc; font-size:14px;" onclick="pasNaamAan(${i})"></i>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3 id="titel-${i}">${huidigeNaam}</h3>
+                        <i class="fas fa-pencil-alt" style="cursor:pointer; color:#ccc; font-size:12px;" onclick="pasNaamAan(${i})"></i>
                     </div>
                     
                     <div id="statusBadge-${i}" class="status-badge badge-vrij">BESCHIKBAAR</div>
                     
-                    <h1 id="huidigTicket-${i}" style="font-size: 40px; margin: 10px 0; color: #ccc;">--</h1>
+                    <div style="text-align: center;">
+                        <h1 id="huidigTicket-${i}" style="font-size: 28px; margin: 10px 0; color: #ccc;">--</h1>
+                    </div>
                     
-                    <div style="display: flex; gap: 5px; justify-content: center; flex-wrap: wrap;">
-                        <div id="roepGroep-${i}" style="display:flex; gap:5px;">
-                            <button class="btn-primary" onclick="roepVolgende(${i})">
-                                <i class="fas fa-bullhorn"></i> Volgende
+                    <div style="display: flex; gap: 5px; justify-content: center; flex-wrap: wrap; margin-top: auto;">
+                        <div id="roepGroep-${i}" style="display:flex; gap:5px; width:100%;">
+                            <button class="btn-primary" onclick="roepVolgende(${i})" style="flex:1;">
+                                <i class="fas fa-bullhorn"></i> Roep
                             </button>
-                            <button class="btn-primary" onclick="kiesUitLijst(${i})" style="background:#4e73df; opacity:0.8;" title="Kies specifiek persoon">
+                            <button class="btn-primary" onclick="kiesUitLijst(${i})" style="background:#4e73df; opacity:0.8; width: 40px;" title="Kies specifiek">
                                 <i class="fas fa-list"></i>
                             </button>
                         </div>
                         
-                        <button id="klaarBtn-${i}" class="btn-success" onclick="toonAfhandelen(${i})" style="display:none;">
+                        <button id="klaarBtn-${i}" class="btn-success" onclick="toonAfhandelen(${i})" style="display:none; width:100%;">
                             <i class="fas fa-check"></i> Klaar
                         </button>
                         
-                        <button id="terugBtn-${i}" class="btn-warning btn-icon" onclick="terugNaarWachtrij(${i})" style="display:none;">
-                            <i class="fas fa-undo"></i>
+                        <button id="terugBtn-${i}" class="btn-warning" onclick="terugNaarWachtrij(${i})" style="display:none; width:100%;">
+                            <i class="fas fa-undo"></i> Terug
                         </button>
                     </div>
                 `;
@@ -130,11 +182,10 @@
         const qWacht = query(collection(db, "tickets"), where("status", "==", "wachtend"), orderBy("timestamp"));
         
         onSnapshot(qWacht, (snapshot) => {
-            laatsteWachtrijSnapshot = snapshot; // Opslaan voor de timer loop
+            laatsteWachtrijSnapshot = snapshot; 
             renderWachtrij(snapshot);
         });
 
-        // Aparte functie om te renderen (zodat we die ook kunnen aanroepen in de timer)
         function renderWachtrij(snapshot) {
             wachtrijData = [];
             const lijst = document.getElementById("wachtrijLijst");
@@ -147,7 +198,6 @@
                 const data = docSnap.data();
                 wachtrijData.push({ id: docSnap.id, ...data });
 
-                // BEREKEN WACHTTIJD
                 let wachttijdTekst = "Net begonnen";
                 if(data.timestamp) {
                     const aanmaakTijd = data.timestamp.toDate();
@@ -159,19 +209,18 @@
                 const div = document.createElement("div");
                 div.className = "card status-wachtend";
                 div.innerHTML = `
-                    <div style="display:flex; align-items:center; gap: 15px;">
-                        <div style="font-size: 24px; font-weight: bold; color: var(--primary); background: #ebf3ff; width: 50px; height: 50px; display:flex; align-items:center; justify-content:center; border-radius:50%;">${data.nummer}</div>
+                    <div style="display:flex; align-items:center; gap: 10px;">
+                        <div style="font-size: 18px; font-weight: bold; color: var(--primary); background: #ebf3ff; width: 40px; height: 40px; display:flex; align-items:center; justify-content:center; border-radius:50%;">${data.nummer}</div>
                         <div style="flex:1;">
-                            <div style="font-weight:600;">${data.opmerking || '<em style="color:#ccc">Geen opmerking</em>'}</div>
-                            <div style="color:var(--danger); font-size:12px; font-weight:bold; margin-top:2px;">
+                            <div style="font-weight:600; font-size: 0.9rem;">${data.opmerking || '<em style="color:#ccc">...</em>'}</div>
+                            <div style="color:var(--danger); font-size:11px; font-weight:bold;">
                                 <i class="far fa-clock"></i> ${wachttijdTekst}
                             </div>
                         </div>
-                    </div>
-                    
-                    <div style="display:flex; flex-direction:column; gap:5px;">
-                        <button onclick="verwijderTicket('${docSnap.id}')" class="btn-danger btn-icon" title="Verwijderen"><i class="fas fa-times"></i></button>
-                        <button onclick="pasOpmerkingAanTicket('${docSnap.id}')" class="btn-primary btn-icon" style="background-color: var(--secondary);" title="Opmerking bewerken"><i class="fas fa-pencil-alt"></i></button>
+                         <div style="display:flex; flex-direction:column; gap:2px;">
+                            <button onclick="verwijderTicket('${docSnap.id}')" class="btn-danger btn-icon" style="padding:2px 5px;"><i class="fas fa-times"></i></button>
+                            <button onclick="pasOpmerkingAanTicket('${docSnap.id}')" class="btn-primary btn-icon" style="background-color: var(--secondary); padding:2px 5px;"><i class="fas fa-pencil-alt"></i></button>
+                        </div>
                     </div>
                 `;
                 lijst.appendChild(div);
@@ -279,7 +328,6 @@
             }
             let htmlLijst = '<div style="text-align:left; max-height:300px; overflow-y:auto;">';
             wachtrijData.forEach(t => {
-                // Ook in de popup laten we de wachttijd zien, dat is handig bij het kiezen!
                 let wachttijdTekst = "0 min";
                 if(t.timestamp) {
                     const min = Math.floor((new Date() - t.timestamp.toDate()) / 60000);
@@ -290,8 +338,8 @@
                     <div onclick="kiesSpecifiek('${t.id}', ${kamerId})" 
                          style="padding:10px; border-bottom:1px solid #eee; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
                          <div>
-                            <strong>Nr. ${t.nummer}</strong> (${t.opmerking || ''})<br>
-                            <span style="font-size:11px; color:red;">${wachttijdTekst} gewacht</span>
+                           <strong>Nr. ${t.nummer}</strong> (${t.opmerking || ''})<br>
+                           <span style="font-size:11px; color:red;">${wachttijdTekst} gewacht</span>
                          </div>
                          <button class="btn-primary btn-icon">Kies</button>
                     </div>`;
