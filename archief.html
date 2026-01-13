@@ -5,6 +5,19 @@
     <title>Archief</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .edit-btn {
+            color: #ccc;
+            cursor: pointer;
+            margin-left: 8px;
+            font-size: 12px;
+            transition: color 0.2s;
+        }
+        .edit-btn:hover {
+            color: var(--primary);
+        }
+    </style>
 </head>
 <body>
     
@@ -32,7 +45,7 @@
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <div>
                 <h2>Afgehandelde Inschrijvingen</h2>
-                <p style="color:#888;">Een overzicht van alle gesprekken die zijn afgerond.</p>
+                <p style="color:#888;">Klik op een potloodje om een opmerking te wijzigen.</p>
             </div>
             <button onclick="exporteerNaarCSV()" class="btn-success">
                 <i class="fas fa-file-excel"></i> Download Excel
@@ -64,10 +77,10 @@
 
     <script type="module">
         import { db } from './firebase-config.js';
-        import { collection, query, where, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { collection, query, where, orderBy, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // Variabele om data in op te slaan voor de export
-        let archiefData = [];
+        // We maken de archiefData globaal beschikbaar zodat we erin kunnen zoeken bij het bewerken
+        window.archiefData = [];
 
         async function laadArchief() {
             const tbody = document.querySelector("#archiefTabel tbody");
@@ -76,11 +89,11 @@
             tbody.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:20px;'><i class='fas fa-spinner fa-spin'></i> Gegevens ophalen...</td></tr>";
 
             try {
-                // Let op: De index moet bestaan (status + timestamp). Check console als het niet laadt.
                 const q = query(collection(db, "tickets"), where("status", "==", "afgehandeld"), orderBy("timestamp", "desc"));
                 
                 const snapshot = await getDocs(q);
-                tbody.innerHTML = ""; // Leegmaken
+                tbody.innerHTML = ""; 
+                window.archiefData = []; // Reset de lijst
 
                 if(snapshot.empty) {
                     legeMelding.style.display = "block";
@@ -89,9 +102,11 @@
 
                 legeMelding.style.display = "none";
 
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    archiefData.push(data); // Opslaan voor export
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    // Voeg ID toe aan data object voor makkelijk zoeken
+                    const item = { id: docSnap.id, ...data };
+                    window.archiefData.push(item);
 
                     // Tijd netjes maken
                     let tijdString = "-";
@@ -99,24 +114,30 @@
                     if(data.timestamp) {
                         const date = data.timestamp.toDate();
                         tijdString = date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                        datumString = date.toLocaleDateString(); // Datum erbij is handig voor archief
+                        datumString = date.toLocaleDateString(); 
                     }
 
                     const tr = document.createElement("tr");
                     tr.innerHTML = `
                         <td>
-                            <span style="font-weight:bold; color:var(--primary); bg-color:#ebf3ff; padding:5px 10px; border-radius:5px; background:#ebf3ff;">${data.nummer}</span>
+                            <span style="font-weight:bold; color:var(--primary); background:#ebf3ff; padding:5px 10px; border-radius:5px;">${data.nummer}</span>
                         </td>
                         <td>
                             <div style="font-weight:bold;">${tijdString}</div>
                             <div style="font-size:12px; color:#aaa;">${datumString}</div>
                         </td>
-                        <td>${data.opmerking || '<em style="color:#ccc">Geen opmerking</em>'}</td>
+                        <td>
+                            ${data.opmerking || '<em style="color:#ccc">-</em>'}
+                            <i class="fas fa-pencil-alt edit-btn" onclick="bewerkBezoekerOpmerking('${docSnap.id}')" title="Wijzig bezoeker opmerking"></i>
+                        </td>
                         <td>
                             <i class="fas fa-user-tie" style="color:#ccc; margin-right:5px;"></i> ${data.kamer || '-'}
                         </td>
                         <td>
-                             ${data.adminNotitie ? `<i class="fas fa-comment-dots" style="color:var(--success);"></i> ${data.adminNotitie}` : '-'}
+                             <span style="${data.adminNotitie ? 'color:#333' : 'color:#ccc'}">
+                                ${data.adminNotitie ? `<i class="fas fa-comment-dots" style="color:var(--success);"></i> ${data.adminNotitie}` : 'Geen notitie'}
+                             </span>
+                             <i class="fas fa-pencil-alt edit-btn" onclick="bewerkAdminNotitie('${docSnap.id}')" title="Wijzig admin notitie"></i>
                         </td>
                     `;
                     tbody.appendChild(tr);
@@ -124,32 +145,70 @@
 
             } catch (error) {
                 console.error("Fout:", error);
-                tbody.innerHTML = `<tr><td colspan='5' style='color:red; text-align:center;'>Fout bij laden. <br>Heb je de Index aangemaakt in Firebase? Check de Console (F12).</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan='5' style='color:red; text-align:center;'>Fout bij laden.</td></tr>`;
             }
         }
 
         laadArchief();
 
-        // Functie om te exporteren naar CSV (Excel)
+        // --- BEWERK FUNCTIES ---
+
+        window.bewerkBezoekerOpmerking = async (id) => {
+            const item = window.archiefData.find(i => i.id === id);
+            if(!item) return;
+
+            const { value: nieuweTekst } = await Swal.fire({
+                title: 'Wijzig Bezoeker Opmerking',
+                input: 'text',
+                inputValue: item.opmerking || '',
+                showCancelButton: true,
+                customClass: { input: 'swal-input-fix' }
+            });
+
+            if (nieuweTekst !== undefined) {
+                await updateDoc(doc(db, "tickets", id), { opmerking: nieuweTekst });
+                laadArchief(); // Herlaad tabel
+                Swal.fire('Opgeslagen!', '', 'success');
+            }
+        };
+
+        window.bewerkAdminNotitie = async (id) => {
+            const item = window.archiefData.find(i => i.id === id);
+            if(!item) return;
+
+            const { value: nieuweTekst } = await Swal.fire({
+                title: 'Wijzig Admin Notitie',
+                input: 'text',
+                inputValue: item.adminNotitie || '',
+                showCancelButton: true,
+                customClass: { input: 'swal-input-fix' }
+            });
+
+            if (nieuweTekst !== undefined) {
+                await updateDoc(doc(db, "tickets", id), { adminNotitie: nieuweTekst });
+                laadArchief(); // Herlaad tabel
+                Swal.fire('Opgeslagen!', '', 'success');
+            }
+        };
+
+        // --- EXPORT FUNCTIE ---
         window.exporteerNaarCSV = () => {
-            if(archiefData.length === 0) {
-                alert("Geen data om te exporteren.");
+            if(window.archiefData.length === 0) {
+                Swal.fire('Leeg', 'Geen data om te exporteren.', 'info');
                 return;
             }
 
             let csvContent = "data:text/csv;charset=utf-8,";
-            csvContent += "Nummer,Datum/Tijd,Bezoeker Opmerking,Kamer,Admin Notitie\r\n"; // Headers
+            csvContent += "Nummer,Datum/Tijd,Bezoeker Opmerking,Kamer,Admin Notitie\r\n"; 
 
-            archiefData.forEach(row => {
-                // Data opschonen voor CSV (komma's verwijderen uit tekst, anders breekt de kolom)
+            window.archiefData.forEach(row => {
                 let tijd = row.timestamp ? row.timestamp.toDate().toLocaleString() : "-";
-                let opm = (row.opmerking || "").replace(/,/g, " ");
-                let notitie = (row.adminNotitie || "").replace(/,/g, " ");
+                let opm = (row.opmerking || "").replace(/,/g, " ").replace(/\n/g, " ");
+                let notitie = (row.adminNotitie || "").replace(/,/g, " ").replace(/\n/g, " ");
                 
                 csvContent += `${row.nummer},${tijd},${opm},${row.kamer},${notitie}\r\n`;
             });
 
-            // Download triggeren
             const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
             link.setAttribute("href", encodedUri);
